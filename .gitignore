@@ -15,10 +15,13 @@
 !/vendor/laravel/framework/src/Illuminate/Http/Request.php
 
 
+
 .env
 /config/database.php
 /bootstrap
 /public/Storage
+.idea
+error_log
 # /public/front-end
 # Homestead.yaml
 # Homestead.json
