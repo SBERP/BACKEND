@@ -61,8 +61,6 @@ class BillService
 		//only data insertion
 		if(is_object($billArray))
 		{
-			// print_r($billArray);
-			// exit;
 
 			$productArray = $billArray->getProductArray();
 			$paymentMode = $billArray->getPaymentMode();
@@ -280,6 +278,49 @@ class BillService
 			$encodingResult = $encodeAllData->getEncodedAllData($billResult);
 			return $encodingResult;
 		}
+	}
+
+	public function getBillById($id) #done
+	{
+		// get exception message
+		$exception = new ExceptionMessage();
+		$exceptionArray = $exception->messageArrays();
+			
+		// data pass to the model object for getData
+		$billModel = new BillModel();
+		$billResult = $billModel->getBillById($id);
+		if(strcmp($billResult,$exceptionArray['204'])==0)
+		{
+			return $billResult;
+		}
+		else
+		{
+			$encodeData = new EncodeAllData();
+			$encodingResult = $encodeData->getEncodedAllData($billResult);
+			return $encodingResult;
+		}
+	}
+
+	public function getBillMonthwise() #done
+	{
+		// get exception message
+		$exception = new ExceptionMessage();
+		$exceptionArray = $exception->messageArrays();
+			
+		// data pass to the model object for getData
+		$billModel = new BillModel();
+		$billResult = $billModel->getBillMonthwise();
+		return $billResult;
+		// if(strcmp($billResult,$exceptionArray['204'])==0)
+		// {
+		// 	return $billResult;
+		// }
+		// else
+		// {
+		// 	$encodeData = new EncodeAllData();
+		// 	$encodingResult = $encodeData->getEncodedAllData($billResult);
+		// 	return $encodingResult;
+		// }
 	}
    	/**
      * call the model for database get opertation

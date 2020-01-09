@@ -103,6 +103,7 @@ class SettingService extends AbstractService
 		$getData = array();
 		$funcName = array();
 		$settingArray = func_get_arg(0);
+
 		
 		for($data=0;$data<count($settingArray);$data++)
 		{

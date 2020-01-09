@@ -156,6 +156,49 @@ class LedgerController extends BaseController implements ContainerInterface
 			return $authenticationResult;
 		}
 	}
+
+	public function getAllLedgers(Request $request)
+	{
+		$tokenAuthentication = new TokenAuthentication();
+		$authenticationResult = $tokenAuthentication->authenticate($request->header());
+		
+		//get constant array
+		$constantClass = new ConstantClass();
+		$constantArray = $constantClass->constantVariable();
+		
+		if(strcmp($constantArray['success'],$authenticationResult)==0)
+		{
+			$ledgerService= new LedgerService();
+			$status = $ledgerService->getAllLedgers();
+			return $status;
+		}
+		else
+		{
+			return $authenticationResult;
+		}
+	}
+
+
+	public function getOutstandings(Request $request)
+	{
+		$tokenAuthentication = new TokenAuthentication();
+		$authenticationResult = $tokenAuthentication->authenticate($request->header());
+		
+		//get constant array
+		$constantClass = new ConstantClass();
+		$constantArray = $constantClass->constantVariable();
+		
+		if(strcmp($constantArray['success'],$authenticationResult)==0)
+		{
+			$ledgerService= new LedgerService();
+			$status = $ledgerService->getOutstandings();
+			return $status;
+		}
+		else
+		{
+			return $authenticationResult;
+		}
+	}
 	
 	/**
      * get the specified resource.
@@ -215,6 +258,29 @@ class LedgerController extends BaseController implements ContainerInterface
 			return $authenticationResult;
 		}
 	}
+
+	public function getCompanyLedgerData(Request $request,$companyId,$ledgerGrpId)
+    {
+		//Authentication
+		$tokenAuthentication = new TokenAuthentication();
+		$authenticationResult = $tokenAuthentication->authenticate($request->header());
+		
+		//get constant array
+		$constantClass = new ConstantClass();
+		$constantArray = $constantClass->constantVariable();
+		
+		if(strcmp($constantArray['success'],$authenticationResult)==0)
+		{
+			$ledgerService= new LedgerService();
+			$status = $ledgerService->getCompanyData($companyId,$ledgerGrpId);
+			return $status;
+		}
+		else
+		{
+			return $authenticationResult;
+		}
+	}
+	
 	
 	/**
      * get the specified resource.

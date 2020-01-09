@@ -147,6 +147,16 @@ class EncodeAllData extends Setting
 					'updatedAt' => $getUpdatedDate[$decodedData]
 				);
 			}
+			else if(strcmp($decodedJson[$decodedData]['setting_type'],$constantArray['taxationSetting'])==0)
+			{
+				$data[$decodedData]= array(
+					'settingId' => $decodedJson[$decodedData]['setting_id'],
+					'settingType' => $decodedJson[$decodedData]['setting_type'],
+					'taxationGstStatus' => $decodedSettingData->taxation_gst_status,
+					'createdAt' => $getCreatedDate[$decodedData],
+					'updatedAt' => $getUpdatedDate[$decodedData]
+				);
+			}
 			else if(strcmp($decodedJson[$decodedData]['setting_type'],$constantArray['workFlowSetting'])==0)
 			{
 				$data[$decodedData]= array(
@@ -189,6 +199,7 @@ class EncodeAllData extends Setting
 					'settingType' => $decodedJson[$decodedData]['setting_type'],
 					'advanceSalesStatus' => $decodedSettingData->advance_sales_status,
 					'advancePurchaseStatus' => $decodedSettingData->advance_purchase_status,
+					'advanceTaxReadOnlyStatus' => isset($decodedSettingData->advance_tax_read_only_status) ? $decodedSettingData->advance_tax_read_only_status : 'disable',
 					'createdAt' => $getCreatedDate[$decodedData],
 					'updatedAt' => $getUpdatedDate[$decodedData]
 				);

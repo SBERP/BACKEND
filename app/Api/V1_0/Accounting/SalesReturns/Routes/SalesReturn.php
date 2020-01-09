@@ -23,5 +23,3 @@ class SalesReturn implements RouteRegistrarInterface
 		Route::post('Accounting/SalesReturns/SalesReturn/{saleId}','Accounting\SalesReturns\Controllers\SalesReturnController@store');
 	}
 }
-
-

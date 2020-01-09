@@ -22,7 +22,9 @@ class Bill implements RouteRegistrarInterface
 		Route::get('Accounting/Bills/Bill', 'Accounting\Bills\Controllers\BillController@getPreviosNextData');
 		Route::get('Accounting/Bills/Bill/draft-bill/{companyId}', 'Accounting\Bills\Controllers\BillController@getDraftData');
 		Route::get('Accounting/Bills/Bill/bulk-print', 'Accounting\Bills\Controllers\BillController@getBulkPrintData');
+		Route::get('Accounting/Bills/Bill/monthwise','Accounting\Bills\Controllers\BillController@getBillMonthwise');
 		Route::get('Accounting/Bills/Bill/{jfId}', 'Accounting\Bills\Controllers\BillController@getBillByJfId');
+		Route::get('Accounting/Bills/Bill/byid/{saleId}', 'Accounting\Bills\Controllers\BillController@getBillById');
 		// insert data post request
 		Route::post('Accounting/Bills/Bill', 'Accounting\Bills\Controllers\BillController@store');
 		Route::post('Accounting/Bills/Bill/draft-bill', 'Accounting\Bills\Controllers\BillController@storeDraftData');

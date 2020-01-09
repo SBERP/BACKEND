@@ -1845,6 +1845,7 @@ class EncodeTaxationData extends ProductService
 					'details' => array(
 						array(
 							'particulars' => '(1)   Import of goods',
+							'taxable_value' => 0,
 							'integrated_tax' => 0,
 							'central_tax' => 0,
 							'state_tax' => 0,
@@ -1852,6 +1853,7 @@ class EncodeTaxationData extends ProductService
 						),
 						array(
 							'particulars' => '(2)   Import of services',
+							'taxable_value' => 0,
 							'integrated_tax' => 0,
 							'central_tax' => 0,
 							'state_tax' => 0,
@@ -1859,6 +1861,7 @@ class EncodeTaxationData extends ProductService
 						),
 						array(
 							'particulars' => '(3)   Inward supplies liable to reverse charge(other than 1 &2 above)',
+							'taxable_value' => 0,
 							'integrated_tax' => 0,
 							'central_tax' => 0,
 							'state_tax' => 0,
@@ -1866,6 +1869,7 @@ class EncodeTaxationData extends ProductService
 						),
 						array(
 							'particulars' => '(4)   Inward supplies from ISD',
+							'taxable_value' => 0,
 							'integrated_tax' => 0,
 							'central_tax' => 0,
 							'state_tax' => 0,
@@ -1873,6 +1877,7 @@ class EncodeTaxationData extends ProductService
 						),
 						array(
 							'particulars' => '(5)   All other ITC',
+							'taxable_value' => 0,
 							'integrated_tax' => 0,
 							'central_tax' => 0,
 							'state_tax' => 0,
@@ -1885,6 +1890,7 @@ class EncodeTaxationData extends ProductService
 					'details' => array(
 						array(
 							'particulars' => '(1)   As per Rule 42 & 43 of SGST/CGST rules',
+							'taxable_value' => 0,
 							'integrated_tax' => 0,
 							'central_tax' => 0,
 							'state_tax' => 0,
@@ -1892,6 +1898,7 @@ class EncodeTaxationData extends ProductService
 						),
 						array(
 							'particulars' => '(2)   Others',
+							'taxable_value' => 0,
 							'integrated_tax' => 0,
 							'central_tax' => 0,
 							'state_tax' => 0,
@@ -1904,6 +1911,7 @@ class EncodeTaxationData extends ProductService
 					'details' => array(
 						array(
 							'particulars' => '',
+							'taxable_value' => 0,
 							'integrated_tax' => 0,
 							'central_tax' => 0,
 							'state_tax' => 0,
@@ -2141,6 +2149,7 @@ class EncodeTaxationData extends ProductService
 				{
 					if ((float)@$inventoryArray[$invCount]['cgstAmount'] != 0 || (float)@$inventoryArray[$invCount]['igstAmount'] != 0 || (float)@$inventoryArray[$invCount]['sgstAmount'] != 0) 
 					{
+						$GSTR3B['itc'][0]['details'][4]['taxable_value'] += (float)@$inventoryArray[$invCount]['price'];
 						$GSTR3B['itc'][0]['details'][4]['central_tax'] += (float)@$inventoryArray[$invCount]['cgstAmount'];
 						$GSTR3B['itc'][0]['details'][4]['state_tax'] += (float)@$inventoryArray[$invCount]['sgstAmount'];
 						$GSTR3B['itc'][0]['details'][4]['integrated_tax'] += (float)@$inventoryArray[$invCount]['igstAmount'];
@@ -2157,15 +2166,17 @@ class EncodeTaxationData extends ProductService
 				}
 			}
 		}
-
+		$integratedPriceArray0 = array_column($GSTR3B['itc'][0]['details'], 'taxable_value');
 		$integratedTaxArray0 = array_column($GSTR3B['itc'][0]['details'], 'integrated_tax');
 		$centralTaxArray0 = array_column($GSTR3B['itc'][0]['details'], 'central_tax');
 		$stateTaxArray0 = array_column($GSTR3B['itc'][0]['details'], 'state_tax');
 		$cessArray0 = array_column($GSTR3B['itc'][0]['details'], 'cess');
+		$integratedPriceArray1 = array_column($GSTR3B['itc'][1]['details'], 'taxable_value');
 		$integratedTaxArray1 = array_column($GSTR3B['itc'][1]['details'], 'integrated_tax');
 		$centralTaxArray1 = array_column($GSTR3B['itc'][1]['details'], 'central_tax');
 		$stateTaxArray1 = array_column($GSTR3B['itc'][1]['details'], 'state_tax');
 		$cessArray1 = array_column($GSTR3B['itc'][1]['details'], 'cess');
+		$GSTR3B['itc'][2]['details'][0]['taxable_value'] = array_sum($integratedPriceArray0) - array_sum($integratedPriceArray1);
 		$GSTR3B['itc'][2]['details'][0]['integrated_tax'] = array_sum($integratedTaxArray0) - array_sum($integratedTaxArray1);
 		$GSTR3B['itc'][2]['details'][0]['central_tax'] = array_sum($centralTaxArray0) - array_sum($centralTaxArray1);
 		$GSTR3B['itc'][2]['details'][0]['state_tax'] = array_sum($stateTaxArray0) - array_sum($stateTaxArray1);

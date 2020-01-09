@@ -42,6 +42,7 @@ use ERP\Core\Settings\Properties\BillSalesmanStatusTrait;
 
 use ERP\Core\Settings\Properties\AdvanceSalesStatusTrait;
 use ERP\Core\Settings\Properties\AdvancePurchaseStatusTrait;
+use ERP\Core\Settings\Properties\AdvanceTaxReadOnlyStatusTrait;
 
 use ERP\Core\Settings\Properties\WebintegrationStatusTrait;
 use ERP\Core\Settings\Properties\WebintegrationUserIdTrait;
@@ -51,6 +52,7 @@ use ERP\Core\Settings\Properties\WebintegrationPushUrlTrait;
 use ERP\Core\Settings\Properties\InventoryItemizeStatusTrait;
 
 use ERP\Core\Settings\Properties\LanguageSettingTypeTrait;
+use ERP\Core\Settings\Properties\TaxationGstStatusTrait;
 
 use ERP\Core\Settings\Properties\WorkFlowQuotationStatusTrait;
 
@@ -100,6 +102,7 @@ class SettingPersistable
 
     use AdvanceSalesStatusTrait;
     use AdvancePurchaseStatusTrait;
+    use AdvanceTaxReadOnlyStatusTrait;
 
     use WebintegrationStatusTrait;
     use WebintegrationUserIdTrait;
@@ -109,6 +112,7 @@ class SettingPersistable
     use InventoryItemizeStatusTrait;
     
     use LanguageSettingTypeTrait;
+    use TaxationGstStatusTrait;
     
     use WorkFlowQuotationStatusTrait;
 }

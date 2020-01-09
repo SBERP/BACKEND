@@ -213,7 +213,9 @@ class EncodeAllData extends ClientService
 				$data[$decodedData]['dispatchStatus'] = $deocodedJsonData[$decodedData]->dispatch_status;
 			}
 			$data[$decodedData]['file'] = $arrayData;
+			
 		}
+
 		
 		$jsonEncodedData = json_encode($data);
 		return $jsonEncodedData;

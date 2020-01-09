@@ -117,7 +117,6 @@ class BillController extends BaseController implements ContainerInterface
 			return $authenticationResult;
 		}
 	}
-
 	/**
 	 * get the specified resource
 	 * @param  Request object[Request $request] and companyId
@@ -391,6 +390,40 @@ class BillController extends BaseController implements ContainerInterface
 			$billModel = new BillModel();
 			$draftBillResult = $billModel->insertBillDraftData($request);
 			return $draftBillResult;
+		} else {
+			return $authenticationResult;
+		}
+	}
+
+	public function getBillById(Request $request,$id)
+	{
+		// Authentication
+		$tokenAuthentication = new TokenAuthentication();
+		$authenticationResult = $tokenAuthentication->authenticate($request->header());
+		// get constant array
+		$constantClass = new ConstantClass();
+		$constantArray = $constantClass->constantVariable();
+		if (strcmp($constantArray['success'], $authenticationResult) == 0) {
+			$billService = new BillService();
+			$billResult = $billService->getBillById($id);
+			return $billResult;
+		} else {
+			return $authenticationResult;
+		}
+	}
+
+	public function getBillMonthwise(Request $request)
+	{
+		// Authentication
+		$tokenAuthentication = new TokenAuthentication();
+		$authenticationResult = $tokenAuthentication->authenticate($request->header());
+		// get constant array
+		$constantClass = new ConstantClass();
+		$constantArray = $constantClass->constantVariable();
+		if (strcmp($constantArray['success'], $authenticationResult) == 0) {
+			$billService = new BillService();
+			$billResult = $billService->getBillMonthwise();
+			return $billResult;
 		} else {
 			return $authenticationResult;
 		}
