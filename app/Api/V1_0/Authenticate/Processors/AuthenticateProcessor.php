@@ -82,20 +82,12 @@ class AuthenticateProcessor extends BaseProcessor
 			{
 
 				$userArray = json_decode($result,true);
-				$lastLogged =Carbon::parse($userArray[0]['updated_at']);
-				$today = Carbon::now();
-				if ($lastLogged->diffInSeconds($today) > 300) 
-				{
-					$userId =  Array();
-					$userId['userId'] = $validationResult['userId'];
-					return $userId;
-				}
-				else
-				{
-					$alreadyLogged = array();
-					$alreadyLogged['error'] = 'User is already logged in.';
-					return json_encode($alreadyLogged);
-				}
+
+				$userId =  Array();
+				
+				$userId['userId'] = $validationResult['userId'];
+				
+				return $userId;
 			}
 		}
     }
