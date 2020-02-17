@@ -23,13 +23,8 @@ class EncodeAllData extends StateService
 		//get constant document-url from document
 		$documentUrl =  new ConstantClass();
 		$documentArray = $documentUrl->constantVariable();
-		$encodeDataClass = new EncodeAllData();
+		
 		$company = new Company();
-		$cityDetail = new CityDetail();
-
-		$stateArray = array();
-		$cityArray = array();
-		$data = array();
 		for($decodedData=0;$decodedData<count($decodedJson);$decodedData++)
 		{
 			$createdAt[$decodedData] = $decodedJson[$decodedData]['created_at'];
@@ -65,10 +60,8 @@ class EncodeAllData extends StateService
 			$cityId[$decodedData] = $decodedJson[$decodedData]['city_id'];
 			
 			//get the state details from database
-			if (!isset($stateArray[$stateAbb[$decodedData]])) {
-				$stateArray[$stateAbb[$decodedData]] = $encodeDataClass->getStateData($stateAbb[$decodedData]);
-			}
-			$stateStatus[$decodedData] = $stateArray[$stateAbb[$decodedData]];
+			$encodeDataClass = new EncodeAllData();
+			$stateStatus[$decodedData] = $encodeDataClass->getStateData($stateAbb[$decodedData]);
 			$stateDecodedJson[$decodedData] = json_decode($stateStatus[$decodedData],true);
 			$stateName[$decodedData]= $stateDecodedJson[$decodedData]['stateName'];
 			$stateIsDisplay[$decodedData]= $stateDecodedJson[$decodedData]['isDisplay'];
@@ -76,10 +69,8 @@ class EncodeAllData extends StateService
 			$stateUpdatedAt[$decodedData]= $stateDecodedJson[$decodedData]['updatedAt'];
 			
 			//get the city details from database
-			if (!isset($cityArray[$cityId[$decodedData]])) {
-				$cityArray[$cityId[$decodedData]] = $cityDetail->getCityDetail($cityId[$decodedData]);
-			}
-			$getCityDetail[$decodedData] = $cityArray[$cityId[$decodedData]];
+			$cityDetail = new CityDetail();
+			$getCityDetail[$decodedData] = $cityDetail->getCityDetail($cityId[$decodedData]);
 			
 			//convert amount(number_format) into their company's selected decimal points
 			$cess[$decodedData] = number_format($cess[$decodedData],$noOfDecimalPoints[$decodedData],'.','');
@@ -99,57 +90,61 @@ class EncodeAllData extends StateService
 				$company->setUpdated_at($convertedUpdatedDate[$decodedData]);
 				$getUpdatedDate[$decodedData] = $company->getUpdated_at();
 			}
-			$data[$decodedData]= array(
-				'companyId'=>$companyId[$decodedData],
-				'companyName' => $companyName[$decodedData],
-				'companyDisplayName' => $companyDisplayName[$decodedData],
-				'websiteName' => $websiteName[$decodedData],
-				'address1' => $address1[$decodedData],
-				'address2' => $address2[$decodedData],
-				'emailId' => $emailId[$decodedData],
-				'customerCare' => $customerCare[$decodedData],
-				'pincode'=> $pincode[$decodedData],
-				'pan' => $pan[$decodedData],
-				'tin' => $tin[$decodedData],
-				'vatNo' =>$vat_no[$decodedData],
-				'cgst' =>$cgst[$decodedData],
-				'sgst' =>$sgst[$decodedData],
-				'cess' =>$cess[$decodedData],
-				'serviceTaxNo' => $serviceTaxNo[$decodedData],
-				'basicCurrencySymbol' => $basicCurrencySymbol[$decodedData],
-				'formalName' => $formalName[$decodedData],
-				'noOfDecimalPoints' => $noOfDecimalPoints[$decodedData],
-				'currencySymbol' => $currencySymbol[$decodedData],
-				'printType' => $printType[$decodedData],
+		}
+		
+		$data = array();
+		for($jsonData=0;$jsonData<count($decodedJson);$jsonData++)
+		{
+			$data[$jsonData]= array(
+				'companyId'=>$companyId[$jsonData],
+				'companyName' => $companyName[$jsonData],
+				'companyDisplayName' => $companyDisplayName[$jsonData],
+				'websiteName' => $websiteName[$jsonData],
+				'address1' => $address1[$jsonData],
+				'address2' => $address2[$jsonData],
+				'emailId' => $emailId[$jsonData],
+				'customerCare' => $customerCare[$jsonData],
+				'pincode'=> $pincode[$jsonData],
+				'pan' => $pan[$jsonData],
+				'tin' => $tin[$jsonData],
+				'vatNo' =>$vat_no[$jsonData],
+				'cgst' =>$cgst[$jsonData],
+				'sgst' =>$sgst[$jsonData],
+				'cess' =>$cess[$jsonData],
+				'serviceTaxNo' => $serviceTaxNo[$jsonData],
+				'basicCurrencySymbol' => $basicCurrencySymbol[$jsonData],
+				'formalName' => $formalName[$jsonData],
+				'noOfDecimalPoints' => $noOfDecimalPoints[$jsonData],
+				'currencySymbol' => $currencySymbol[$jsonData],
+				'printType' => $printType[$jsonData],
 				'logo' => array(
-					'documentName'=> $documentName[$decodedData],
+					'documentName'=> $documentName[$jsonData],
 					'documentUrl' => $documentUrl,
-					'documentSize' => $documentSize[$decodedData],
-					'documentFormat' => $documentFormat[$decodedData]
+					'documentSize' => $documentSize[$jsonData],
+					'documentFormat' => $documentFormat[$jsonData]
 				),
-				'isDisplay' => $isDisplay[$decodedData],
-				'isDefault' => $isDefault[$decodedData],
-				'createdAt' => $getCreatedDate[$decodedData],
-				'updatedAt' => $getUpdatedDate[$decodedData],
+				'isDisplay' => $isDisplay[$jsonData],
+				'isDefault' => $isDefault[$jsonData],
+				'createdAt' => $getCreatedDate[$jsonData],
+				'updatedAt' => $getUpdatedDate[$jsonData],
 				
 				'state' => array(
-					'stateAbb' => $stateAbb[$decodedData],
-					'stateName' => $stateName[$decodedData],
-					'isDisplay' => $stateIsDisplay[$decodedData],
-					'createdAt' => $stateCreatedAt[$decodedData],
-					'updatedAt' => $stateUpdatedAt[$decodedData]
+					'stateAbb' => $stateAbb[$jsonData],
+					'stateName' => $stateName[$jsonData],
+					'isDisplay' => $stateIsDisplay[$jsonData],
+					'createdAt' => $stateCreatedAt[$jsonData],
+					'updatedAt' => $stateUpdatedAt[$jsonData]
 				),
 				'city'=> array(
-					'cityId' => $cityId[$decodedData],
-					'cityName' => $getCityDetail[$decodedData]['cityName'],
-					'isDisplay' => $getCityDetail[$decodedData]['isDisplay'],
-					'createdAt' => $getCityDetail[$decodedData]['createdAt'],
-					'updatedAt' => $getCityDetail[$decodedData]['updatedAt'],
-					'stateAbb' => $getCityDetail[$decodedData]['state']['stateAbb']
+					'cityId' => $cityId[$jsonData],
+					'cityName' => $getCityDetail[$jsonData]['cityName'],
+					'isDisplay' => $getCityDetail[$jsonData]['isDisplay'],
+					'createdAt' => $getCityDetail[$jsonData]['createdAt'],
+					'updatedAt' => $getCityDetail[$jsonData]['updatedAt'],
+					'stateAbb' => $getCityDetail[$jsonData]['state']['stateAbb']
 				)
 			);
 		}
-		
 		return $documentArray['prefixConstant'].json_encode($data);
 	}
 }

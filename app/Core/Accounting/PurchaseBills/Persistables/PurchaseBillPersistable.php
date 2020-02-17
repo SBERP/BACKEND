@@ -30,10 +30,8 @@ use ERP\Core\Accounting\PurchaseBills\Properties\VendorIdTrait;
 use ERP\Core\Accounting\PurchaseBills\Properties\BillNumberTrait;
 use ERP\Core\Accounting\PurchaseBills\Properties\BillTypeTrait;
 use ERP\Core\Accounting\PurchaseBills\Properties\TransactionTypeTrait;
-use ERP\Core\Accounting\PurchaseBills\Properties\PurchaseIdArrayPropertyTrait;
 // use ERP\Core\Accounting\PurchaseBills\Properties\IsPurchaseOrderTrait;
 use ERP\Core\Accounting\Bills\Properties\ExpenseTrait;
-use ERP\Core\Accounting\PurchaseBills\Properties\DueDateTrait;
 
 /**
  * @author Reema Patel<reema.p@siliconbrain.in>
@@ -69,8 +67,6 @@ class PurchaseBillPersistable
 	use FromDatePropertyTrait;
 	use ToDatePropertyTrait;
 	use TransactionTypeTrait;
-	use PurchaseIdArrayPropertyTrait;
 	// use IsPurchaseOrderTrait;
 	use ExpenseTrait;
-	use DueDateTrait;
 }

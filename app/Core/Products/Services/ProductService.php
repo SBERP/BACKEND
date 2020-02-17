@@ -119,20 +119,23 @@ class ProductService extends AbstractService
 		$productArray = array();
 		$productArrayResult = func_get_arg(0);
 		$productArray = $productArrayResult['dataArray'];
-
 		for($arrayData=0;$arrayData<count($productArray);$arrayData++)
 		{
+			$funcName = array();
+			$getData = array();
+			$keyName = array();
 			for($data=0;$data<count($productArray[$arrayData]);$data++)
 			{
-				$funcName = $productArray[$arrayData][$data][0]->getName();
-				$getData = $productArray[$arrayData][$data][0]->$funcName();
-				$keyName = $productArray[$arrayData][$data][0]->getkey();
-				$getArrayData[$arrayData][$keyName] = $getData;
+				$funcName[$data] = $productArray[$arrayData][$data][0]->getName();
+				$getData[$data] = $productArray[$arrayData][$data][0]->$funcName[$data]();
+				$keyName[$data] = $productArray[$arrayData][$data][0]->getkey();
 			}
+			array_push($getArrayData,$getData);
+			array_push($keyArrayData,$keyName);
 		}
 		//data pass to the model object for insert
 		$productModel = new ProductModel();
-		$status = $productModel->insertBatchData($getArrayData,$productArrayResult['errorArray']);
+		$status = $productModel->insertBatchData($getArrayData,$keyArrayData,$productArrayResult['errorArray']);
 		return $status;
 	}
 	

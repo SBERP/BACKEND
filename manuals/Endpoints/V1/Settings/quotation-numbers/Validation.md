@@ -1,3 +1,0 @@
-##### Quotation Validation Rules
-
-- pending

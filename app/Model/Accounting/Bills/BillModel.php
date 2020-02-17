@@ -7,7 +7,8 @@ use Carbon;
 use ERP\Exceptions\ExceptionMessage;
 use ERP\Entities\Constants\ConstantClass;
 use ERP\Model\Accounting\Journals\JournalModel;
-use ERP\Model\Settings\InvoiceNumbers\InvoiceModel;
+use ERP\Core\Settings\InvoiceNumbers\Services\InvoiceService;
+use ERP\Api\V1_0\Settings\InvoiceNumbers\Controllers\InvoiceController;
 use Illuminate\Container\Container;
 use ERP\Http\Requests;
 use Illuminate\Http\Response;
@@ -16,8 +17,7 @@ use ERP\Model\Clients\ClientModel;
 use ERP\Core\Clients\Entities\ClientArray;
 use stdClass;
 use ERP\Model\Settings\SettingModel;
-use ERP\Api\V1_0\Accounting\Bills\Transformers\SaleInventoryTransformer;
-/** 
+/**
  * @author Reema Patel<reema.p@siliconbrain.in>
  */
 class BillModel extends Model
@@ -29,22 +29,16 @@ class BillModel extends Model
 	 * @param  array
 	 * returns the status
 	*/
-	function __construct()
-	{
-		parent::__construct();
-		$exceptions = new ExceptionMessage();
-		$this->messages = $exceptions->messageArrays();
-		$this->constant = new ConstantClass();
-		$this->constantVars = $this->constant->constantVariable();
-		$database = $this->constant->constantDatabase();
-		$this->database = DB::connection($database);
-	}
-	public function insertAllData($productArray,$paymentMode,$bankLedgerId,$invoiceNumber,$jobCardNumber,$bankName,$checkNumber,$total,$extraCharge,$tax,$grandTotal,$advance,$balance,$remark,$entryDate,$companyId,$branchId,$ClientId,$salesType,$documentArray,$jfId,$totalDiscounttype,$totalDiscount,$totalCgstPercentage,$totalSgstPercentage,$totalIgstPercentage,$poNumber,$requestData,$expense,$serviceDate,$userId,$createdBy = 0)
+	public function insertAllData($productArray,$paymentMode,$bankLedgerId,$invoiceNumber,$jobCardNumber,$bankName,$checkNumber,$total,$extraCharge,$tax,$grandTotal,$advance,$balance,$remark,$entryDate,$companyId,$branchId,$ClientId,$salesType,$documentArray,$jfId,$totalDiscounttype,$totalDiscount,$totalCgstPercentage,$totalSgstPercentage,$totalIgstPercentage,$poNumber,$requestData,$expense,$serviceDate,$userId)
 	{
 		$mytime = Carbon\Carbon::now();
 		//database selection
+		$database = "";
+		$constantDatabase = new ConstantClass();
+		$databaseName = $constantDatabase->constantDatabase();
 		//get exception message
-		$exceptionArray = $this->messages;
+		$exception = new ExceptionMessage();
+		$exceptionArray = $exception->messageArrays();
 		$requestInput = $requestData->input();
 		$isSalesOrder = array_key_exists("issalesorder",$requestData->header())?"is_salesorder='ok'":"is_salesorder='not'";
 		$isSalesOrderInsert = array_key_exists("issalesorder",$requestData->header())?"ok":"not";
@@ -52,7 +46,7 @@ class BillModel extends Model
 		{
 			//get job-card-number for checking job-card-number is exist or not
 			DB::beginTransaction();
-			$getJobCardNumber = $this->database->select("select
+			$getJobCardNumber = DB::connection($databaseName)->select("select
 			job_card_number 
 			from sales_bill 
 			where job_card_number='".$jobCardNumber."' and 
@@ -66,7 +60,7 @@ class BillModel extends Model
 		if(array_key_exists("isDraft",$requestInput))
 		{
 			DB::beginTransaction();
-			$raw = $this->database->statement("update sales_bill set
+			$raw = DB::connection($databaseName)->statement("update sales_bill set
 			product_array='".$productArray."',
 			payment_mode='".$paymentMode."',
 			bank_ledger_id='".$bankLedgerId."',
@@ -95,8 +89,6 @@ class BillModel extends Model
 			sales_type='".$salesType."',
 			client_id='".$ClientId."',
 			jf_id='".$jfId."',
-			created_by='".$createdBy."',
-			updated_by='".$createdBy."',
 			updated_at='".$mytime."',
 			is_draft='no',
 			".$isSalesOrder."
@@ -116,7 +108,7 @@ class BillModel extends Model
 			if(count($getJobCardNumber)==0)
 			{
 				DB::beginTransaction();
-				$raw = $this->database->statement("insert into sales_bill(
+				$raw = DB::connection($databaseName)->statement("insert into sales_bill(
 				product_array,
 				payment_mode,
 				bank_ledger_id,
@@ -146,10 +138,10 @@ class BillModel extends Model
 				sales_type,
 				client_id,
 				jf_id,
-				created_by,
 				created_at) 
-				values('".$productArray."','".$paymentMode."','".$bankLedgerId."','".$invoiceNumber."','".$jobCardNumber."','".$bankName."','".$checkNumber."','".$total."','".$totalDiscounttype."','".$totalDiscount."','".$totalCgstPercentage."','".$totalSgstPercentage."','".$totalIgstPercentage."','".$extraCharge."','".$tax."','".$grandTotal."','".$advance."','".$balance."','".$poNumber."','".$userId."','".$isSalesOrderInsert."','".$remark."','".$entryDate."','".$serviceDate."','".$companyId."','".$branchId."','".$salesType."','".$ClientId."','".$createdBy."','".$mytime."')");
+				values('".$productArray."','".$paymentMode."','".$bankLedgerId."','".$invoiceNumber."','".$jobCardNumber."','".$bankName."','".$checkNumber."','".$total."','".$totalDiscounttype."','".$totalDiscount."','".$totalCgstPercentage."','".$totalSgstPercentage."','".$totalIgstPercentage."','".$extraCharge."','".$tax."','".$grandTotal."','".$advance."','".$balance."','".$poNumber."','".$userId."','".$isSalesOrderInsert."','".$remark."','".$entryDate."','".$serviceDate."','".$companyId."','".$branchId."','".$salesType."','".$ClientId."','".$jfId."','".$mytime."')");
 				DB::commit();
+				
 				//update invoice-number
 				$invoiceResult = $this->updateInvoiceNumber($companyId);
 				if(strcmp($invoiceResult,$exceptionArray['200'])!=0)
@@ -161,7 +153,7 @@ class BillModel extends Model
 			{
 				//update bill data
 				DB::beginTransaction();
-				$raw = $this->database->statement("update 
+				$raw = DB::connection($databaseName)->statement("update 
 				sales_bill set 
 				product_array='".$productArray."',
 				payment_mode='".$paymentMode."',
@@ -191,8 +183,6 @@ class BillModel extends Model
 				po_number='".$poNumber."',
 				user_id='".$userId."',
 				jf_id='".$jfId."',
-				created_by='".$createdBy."',
-				updated_by='".$createdBy."',
 				updated_at='".$mytime."' 
 				where job_card_number='".$jobCardNumber."' and
 				deleted_at='0000-00-00 00:00:00'");
@@ -204,7 +194,7 @@ class BillModel extends Model
 		{
 			//get latest sale-id from database
 			DB::beginTransaction();
-			$saleId = $this->database->select("SELECT 
+			$saleId = DB::connection($databaseName)->select("SELECT 
 			max(sale_id) sale_id
 			FROM sales_bill where deleted_at='0000-00-00 00:00:00' and ".$isSalesOrder);
 			DB::commit();
@@ -218,11 +208,10 @@ class BillModel extends Model
 					{
 						//insertion in sale_expense_dtl
 						DB::beginTransaction();
-						$raw = $this->database->statement("insert into sale_expense_dtl(
+						$raw = DB::connection($databaseName)->statement("insert into sale_expense_dtl(
 						expense_name,
 						expense_type,
 						expense_value,
-						expense_tax,
 						expense_operation,
 						sale_id,
 						expense_id,
@@ -231,7 +220,6 @@ class BillModel extends Model
 						'".$decodedJsonExpense[$expenseArray]->expenseName."',
 						'".$decodedJsonExpense[$expenseArray]->expenseType."',
 						'".$decodedJsonExpense[$expenseArray]->expenseValue."',
-						'".$decodedJsonExpense[$expenseArray]->expenseTax."',
 						'".$decodedJsonExpense[$expenseArray]->expense_operation."',
 						'".$saleId[0]->sale_id."',
 						'".$decodedJsonExpense[$expenseArray]->expenseId."',
@@ -241,7 +229,7 @@ class BillModel extends Model
 				}
 			}
 			DB::beginTransaction();
-			$salesTrnData = $this->database->statement("insert into sales_bill_trn(
+			$salesTrnData = DB::connection($databaseName)->statement("insert into sales_bill_trn(
 			product_array,
 			payment_mode,
 			bank_ledger_id,
@@ -281,7 +269,7 @@ class BillModel extends Model
 				{
 					// add documents in sale-document table
 					DB::beginTransaction();
-					$saleDocumentResult = $this->database->statement("insert into sales_bill_doc_dtl(
+					$saleDocumentResult = DB::connection($databaseName)->statement("insert into sales_bill_doc_dtl(
 					sale_id,
 					document_name,
 					document_size,
@@ -292,7 +280,7 @@ class BillModel extends Model
 					
 					// add documents in client database
 					DB::beginTransaction();
-					$clientDocumentResult = $this->database->statement("insert into client_doc_dtl(
+					$clientDocumentResult = DB::connection($databaseName)->statement("insert into client_doc_dtl(
 					sale_id,
 					document_name,
 					document_size,
@@ -310,7 +298,7 @@ class BillModel extends Model
 				{
 					//get latest sale data from database
 					DB::beginTransaction();
-					$billResult = $this->database->select("select
+					$billResult = DB::connection($databaseName)->select("select
 					sale_id,
 					product_array,
 					payment_mode,
@@ -341,18 +329,17 @@ class BillModel extends Model
 					branch_id,
 					jf_id,
 					created_at,
-					updated_at
+					updated_at 
 					from sales_bill where sale_id=(select MAX(sale_id) as sale_id from sales_bill) and deleted_at='0000-00-00 00:00:00' and is_draft='no' and ".$isSalesOrder); 
 					DB::commit();
 					//get latest expense sale data from database
 					DB::beginTransaction();
-					$billExpenseResult = $this->database->select("select 
+					$billExpenseResult = DB::connection($databaseName)->select("select 
 					sale_expense_id as saleExpenseId,
 					expense_type as expenseType,
 					expense_id as expenseId,
 					expense_name as expenseName,
 					expense_value as expenseValue,
-					expense_tax as expenseTax,
 					expense_operation as expenseOperation,
 					sale_id as saleId
 					from sale_expense_dtl
@@ -386,7 +373,7 @@ class BillModel extends Model
 	 * @param  array
 	 * returns the status
 	*/
-	public function insertData($productArray,$paymentMode,$bankLedgerId,$invoiceNumber,$jobCardNumber,$bankName,$checkNumber,$total,$extraCharge,$tax,$grandTotal,$advance,$balance,$remark,$entryDate,$companyId,$branchId,$ClientId,$salesType,$jfId,$totalDiscounttype,$totalDiscount,$totalCgstPercentage,$totalSgstPercentage,$totalIgstPercentage,$poNumber,$requestData,$expense,$serviceDate,$userId,$createdBy = 0)
+	public function insertData($productArray,$paymentMode,$bankLedgerId,$invoiceNumber,$jobCardNumber,$bankName,$checkNumber,$total,$extraCharge,$tax,$grandTotal,$advance,$balance,$remark,$entryDate,$companyId,$branchId,$ClientId,$salesType,$jfId,$totalDiscounttype,$totalDiscount,$totalCgstPercentage,$totalSgstPercentage,$totalIgstPercentage,$poNumber,$requestData,$expense,$serviceDate,$userId)
 	{
 		$mytime = Carbon\Carbon::now();
 		//database selection
@@ -394,42 +381,30 @@ class BillModel extends Model
 		$constantDatabase = new ConstantClass();
 		$databaseName = $constantDatabase->constantDatabase();
 		//get exception message
-		$saleId = 0;
 		$exception = new ExceptionMessage();
 		$exceptionArray = $exception->messageArrays();
 		$requestInput = $requestData->input();
-		$printCount = '0';
-		if(array_key_exists('operation',$requestData->header()))
-		{
-			if ($requestData->header()['operation'][0]== 'generate') {
-				$printCount = '1';
-			}
-		}
 		$salesOrder = array_key_exists("issalesorder",$requestData->header()) ? "is_salesorder='ok'" : "is_salesorder='not'";
 		$salesOrderInsert = array_key_exists("issalesorder",$requestData->header()) ? "ok" : "not";
 		if($jobCardNumber!="")
 		{
 			//get job-card-number for checking job-card-number is exist or not
 			DB::beginTransaction();
-			$getJobCardNumber = $this->database->select("select
-			job_card_number, sale_id
+			$getJobCardNumber = DB::connection($databaseName)->select("select
+			job_card_number 
 			from sales_bill 
 			where job_card_number='".$jobCardNumber."' and 
 			deleted_at='0000-00-00 00:00:00' and is_draft='no' and ".$salesOrder);
 			DB::commit();
-			if(count($getJobCardNumber)) {
-				$saleId = $getJobCardNumber[0]->sale_id;
-			}
 		}
 		else
 		{
 			$getJobCardNumber = array();
 		}
-
 		if(array_key_exists("isDraft",$requestInput))
 		{
 			DB::beginTransaction();
-			$raw = $this->database->statement("update sales_bill set
+			$raw = DB::connection($databaseName)->statement("update sales_bill set
 			product_array='".$productArray."',
 			payment_mode='".$paymentMode."',
 			bank_ledger_id='".$bankLedgerId."',
@@ -458,41 +433,27 @@ class BillModel extends Model
 			sales_type='".$salesType."',
 			client_id='".$ClientId."',
 			jf_id='".$jfId."',
-			print_count='$printCount',
-			created_by='".$createdBy."',
-			updated_by='".$createdBy."',
 			updated_at='".$mytime."',
 			is_draft='no',
 			".$salesOrder."
 			where sale_id='".$requestInput['isDraft']."'");
 			DB::commit();
-			$saleId = $requestInput['isDraft'];
-			$transformer = new SaleInventoryTransformer();
-			$trimInv = $transformer->trimInventory($productArray, $saleId);
-
-			$invModel = new SaleInventoryModel();
-			$invStatus = $invModel->insertData($trimInv);
-			if(strcmp($invStatus, $exceptionArray['200'])!=0) {
-				return $invStatus;
-			}
+			
 			//update invoice-number
 			$invoiceResult = $this->updateInvoiceNumber($companyId);
 			if(strcmp($invoiceResult,$exceptionArray['200'])!=0)
-			{				
+			{
 				return $invoiceResult;
 			}
 		}
 		else
-		{			
+		{
 			//if job-card-number is exists then update bill data otherwise insert bill data
 			if(count($getJobCardNumber)==0)
 			{
-				$valueArray = array($productArray, $paymentMode, $bankLedgerId, $invoiceNumber, $jobCardNumber, $bankName, $checkNumber, $total,$totalDiscounttype,$totalDiscount,$totalCgstPercentage,$totalSgstPercentage,$totalIgstPercentage,$extraCharge,$tax,$grandTotal,$advance,$balance,$poNumber,$userId,$salesOrderInsert,$remark,$entryDate,$serviceDate,$companyId,$branchId,$ClientId,$salesType,$jfId,$printCount,$createdBy,$mytime);
-				$valueStr = "?";
-				$valueStr .= str_repeat(', ?', count($valueArray) - 1);
 				//insert bill data
 				DB::beginTransaction();
-				$raw = $this->database->statement("insert into sales_bill(
+				$raw = DB::connection($databaseName)->statement("insert into sales_bill(
 				product_array,
 				payment_mode,
 				bank_ledger_id,
@@ -522,28 +483,14 @@ class BillModel extends Model
 				client_id,
 				sales_type,
 				jf_id,
-				print_count,
-				created_by,
 				created_at) 
-				values({$valueStr})", $valueArray);
-
-				$saleId = $this->database->select("SELECT 
-				max(sale_id) sale_id
-				FROM sales_bill where deleted_at='0000-00-00 00:00:00' and is_draft='no' and ".$salesOrder);
+				values('".$productArray."','".$paymentMode."','".$bankLedgerId."','".$invoiceNumber."','".$jobCardNumber."','".$bankName."','".$checkNumber."','".$total."','".$totalDiscounttype."','".$totalDiscount."','".$totalCgstPercentage."','".$totalSgstPercentage."','".$totalIgstPercentage."','".$extraCharge."','".$tax."','".$grandTotal."','".$advance."','".$balance."','".$poNumber."','".$userId."','".$salesOrderInsert."','".$remark."','".$entryDate."','".$serviceDate."','".$companyId."','".$branchId."','".$ClientId."','".$salesType."','".$jfId."','".$mytime."')");
 				DB::commit();
-				$saleId = $saleId[0]->sale_id;
-				$transformer = new SaleInventoryTransformer();
-				$trimInv = $transformer->trimInventory($productArray, $saleId);
-
-				$invModel = new SaleInventoryModel();
-				$invStatus = $invModel->insertData($trimInv);
-				if(strcmp($invStatus, $exceptionArray['200'])!=0) {
-					return $invStatus;
-				}
+				
 				//update invoice-number
 				$invoiceResult = $this->updateInvoiceNumber($companyId);
 				if(strcmp($invoiceResult,$exceptionArray['200'])!=0)
-				{					
+				{
 					return $invoiceResult;
 				}
 			}
@@ -551,81 +498,81 @@ class BillModel extends Model
 			{
 				//update bill data
 				DB::beginTransaction();
-				$valueArray = array($productArray, $paymentMode, $bankLedgerId, $jobCardNumber, $bankName, $checkNumber, $total, $totalDiscounttype, $totalDiscount, $totalCgstPercentage, $totalSgstPercentage, $totalIgstPercentage, $extraCharge, $tax, $grandTotal, $advance, $balance, $poNumber, $userId, $remark, $entryDate, $serviceDate, $companyId, $branchId, $ClientId, $salesType, $jfId, $printCount, $createdBy, $createdBy, $mytime, $jobCardNumber);
-				$raw = $this->database->statement("update 
+				$raw = DB::connection($databaseName)->statement("update 
 				sales_bill set 
-				product_array= ?,
-				payment_mode= ?,
-				bank_ledger_id= ?,
-				job_card_number= ?,
-				bank_name= ?,
-				check_number= ?,
-				total= ?,
-				total_discounttype= ?,
-				total_discount= ?,
-				total_cgst_percentage= ?,
-				total_sgst_percentage= ?,
-				total_igst_percentage= ?,
-				extra_charge= ?,
-				tax= ?,
-				grand_total= ?,
-				advance= ?,
-				balance= ?,
-				po_number= ?,
-				user_id= ?,
-				remark= ?,
-				entry_date= ?,
-				service_date= ?,
-				company_id= ?,
-				branch_id= ?,
-				client_id= ?,
-				sales_type= ?,
+				product_array='".$productArray."',
+				payment_mode='".$paymentMode."',
+				bank_ledger_id='".$bankLedgerId."',
+				job_card_number='".$jobCardNumber."',
+				bank_name='".$bankName."',
+				check_number='".$checkNumber."',
+				total='".$total."',
+				total_discounttype='".$totalDiscounttype."',
+				total_discount='".$totalDiscount."',
+				total_cgst_percentage='".$totalCgstPercentage."',
+				total_sgst_percentage='".$totalSgstPercentage."',
+				total_igst_percentage='".$totalIgstPercentage."',
+				extra_charge='".$extraCharge."',
+				tax='".$tax."',
+				grand_total='".$grandTotal."',
+				advance='".$advance."',
+				balance='".$balance."',
+				po_number='".$poNumber."',
+				user_id='".$userId."',
+				remark='".$remark."',
+				entry_date='".$entryDate."',
+				service_date='".$serviceDate."',
+				company_id='".$companyId."',
+				branch_id='".$branchId."',
+				client_id='".$ClientId."',
+				sales_type='".$salesType."',
 				".$salesOrder.",
-				jf_id= ?,
-				print_count= ?,
-				created_by= ?,
-				updated_by= ?,
-				updated_at= ? 
-				where job_card_number= ? and 
-				deleted_at='0000-00-00 00:00:00'", $valueArray);
+				jf_id='".$jfId."',
+				updated_at='".$mytime."' 
+				where job_card_number='".$jobCardNumber."' and 
+				deleted_at='0000-00-00 00:00:00'");
 				DB::commit();
 			}
 		}
-
 		$decodedJsonExpense = json_decode($expense);
 		if($raw==1)
 		{
+			DB::beginTransaction();
+			$saleId = DB::connection($databaseName)->select("SELECT 
+			max(sale_id) sale_id
+			FROM sales_bill where deleted_at='0000-00-00 00:00:00' and is_draft='no' and ".$salesOrder);
+			DB::commit();
 			if($decodedJsonExpense!="" && is_array($decodedJsonExpense))
 			{
 				if(count($decodedJsonExpense)!=0)
 				{
 					$expenseCountData = count($decodedJsonExpense);
-					$valueArray = call_user_func_array('array_merge', array_map(function($br) use($saleId, $mytime) {
-						$ar = array($br->expenseName, $br->expenseType, $br->expenseValue, $br->expenseTax, $br->expenseOperation, $saleId, $br->expenseId, $mytime);
-						return $ar;
-					}, $decodedJsonExpense));
-					$valueStr = "(?, ?, ?, ?, ?, ?, ?, ?)";
-					$valueStr .= str_repeat(", (?, ?, ?, ?, ?, ?, ?, ?)", $expenseCountData - 1);
-					DB::beginTransaction();
-					$this->database->statement("INSERT INTO sale_expense_dtl(
-					expense_name,
-					expense_type,
-					expense_value,
-					expense_tax,
-					expense_operation,
-					sale_id,
-					expense_id,
-					created_at)
-					VALUES {$valueStr};", $valueArray);
-					DB::commit();
+					for($expenseArray=0;$expenseArray<$expenseCountData;$expenseArray++)
+					{
+						DB::beginTransaction();
+						$raw = DB::connection($databaseName)->statement("insert into sale_expense_dtl(
+						expense_name,
+						expense_type,
+						expense_value,
+						expense_operation,
+						sale_id,
+						expense_id,
+						created_at)
+						values(
+						'".$decodedJsonExpense[$expenseArray]->expenseName."',
+						'".$decodedJsonExpense[$expenseArray]->expenseType."',
+						'".$decodedJsonExpense[$expenseArray]->expenseValue."',
+						'".$decodedJsonExpense[$expenseArray]->expenseOperation."',
+						'".$saleId[0]->sale_id."',
+						'".$decodedJsonExpense[$expenseArray]->expenseId."',
+						'".$mytime."')");
+						DB::commit();
+					}
 				}
 			}
 			//insertion in sale bill transaction
-			$valueArray = array($productArray, $paymentMode, $bankLedgerId, $invoiceNumber, $jobCardNumber, $bankName, $checkNumber, $total, $totalDiscounttype, $totalDiscount, $totalCgstPercentage, $totalSgstPercentage, $totalIgstPercentage, $extraCharge, $tax, $grandTotal, $advance, $balance, $poNumber, $userId, $salesOrderInsert, $remark, $entryDate, $serviceDate, $companyId, $branchId, $ClientId, $salesType, $saleId, $jfId, $mytime);
-			$valueStr = "?";
-			$valueStr .= str_repeat(', ?', count($valueArray) - 1);
 			DB::beginTransaction();
-			$raw = $this->database->statement("insert into sales_bill_trn(
+			$raw = DB::connection($databaseName)->statement("insert into sales_bill_trn(
 			product_array,
 			payment_mode,
 			bank_ledger_id,
@@ -656,12 +603,12 @@ class BillModel extends Model
 			sales_type,
 			sale_id,
 			jf_id,
-			created_at)
-			values ({$valueStr});", $valueArray);
+			created_at) 
+			values('".$productArray."','".$paymentMode."','".$bankLedgerId."','".$invoiceNumber."','".$jobCardNumber."','".$bankName."','".$checkNumber."','".$total."','".$totalDiscounttype."','".$totalDiscount."','".$totalCgstPercentage."','".$totalSgstPercentage."','".$totalIgstPercentage."','".$extraCharge."','".$tax."','".$grandTotal."','".$advance."','".$balance."','".$poNumber."','".$userId."','".$salesOrderInsert."','".$remark."','".$entryDate."','".$serviceDate."','".$companyId."','".$branchId."','".$ClientId."','".$salesType."','".$saleId[0]->sale_id."','".$jfId."','".$mytime."')");
 			DB::commit();
 			//get latest inserted sale bill data
 			DB::beginTransaction();
-			$billResult = $this->database->select("select
+			$billResult = DB::connection($databaseName)->select("select
 			sale_id,
 			product_array,
 			payment_mode,
@@ -691,25 +638,23 @@ class BillModel extends Model
 			company_id,
 			branch_id,
 			jf_id,
-			print_count,
 			created_at,
 			updated_at 
-			from sales_bill where sale_id= ? and deleted_at='0000-00-00 00:00:00' and is_draft='no' and ".$salesOrder,[$saleId]);
+			from sales_bill where sale_id=(select MAX(sale_id) as sale_id from sales_bill) and deleted_at='0000-00-00 00:00:00' and is_draft='no' and ".$salesOrder); 
 			DB::commit();
 			//get latest expense sale data from database
 			DB::beginTransaction();
-			$billExpenseResult = $this->database->select("select 
+			$billExpenseResult = DB::connection($databaseName)->select("select 
 			sale_expense_id as saleExpenseId,
 			expense_type as expenseType,
 			expense_id as expenseId,
 			expense_name as expenseName,
 			expense_value as expenseValue,
-			expense_tax as expenseTax,
 			expense_operation as expenseOperation,
 			sale_id as saleId
 			from sale_expense_dtl
 			where deleted_at='0000-00-00 00:00:00' and
-			sale_id=?;", [$saleId]);
+			sale_id=(select MAX(sale_id) as sale_id from sales_bill)");
 			DB::commit();
 			$billResult[0]->expense = $billExpenseResult;
 			if(count($billResult)==1)
@@ -785,7 +730,7 @@ class BillModel extends Model
 			$saleId = $request->header()['saleid'][0];
 			//update sale-bill draft data
 			DB::beginTransaction();
-			$raw = $this->database->statement("update sales_bill
+			$raw = DB::connection($databaseName)->statement("update sales_bill
 			set ".$updateString."updated_at='".$mytime."',is_draft='yes',product_array='".$inventoryDecodedData."' 
 			where sale_id=".$saleId);
 			DB::commit();
@@ -794,7 +739,7 @@ class BillModel extends Model
 		{
 			//insert sale-bill draft data
 			DB::beginTransaction();
-			$raw = $this->database->statement("insert into sales_bill
+			$raw = DB::connection($databaseName)->statement("insert into sales_bill
 			(".$keyString."product_array,is_draft,created_at)
 			values(".$valueString."'".$inventoryDecodedData."','yes','".$mytime."')");
 			DB::commit();
@@ -823,14 +768,20 @@ class BillModel extends Model
 		$exception = new ExceptionMessage();
 		$exceptionArray = $exception->messageArrays();
 		
-		$invoiceModel = new InvoiceModel();
-		$invoiceData = $invoiceModel->getLatestInvoiceData($companyId);
+		$invoiceService = new InvoiceService();	
+		$invoiceData = $invoiceService->getLatestInvoiceData($companyId);
 		if(strcmp($exceptionArray['204'],$invoiceData)==0)
 		{
 			return $invoiceData;
 		}
-		$invoiceId = json_decode($invoiceData)[0]->invoice_id;
-		$updateResult = $invoiceModel->incrementInvoiceNumber($invoiceId);
+		$endAt = json_decode($invoiceData)->endAt;
+		$invoiceController = new InvoiceController(new Container());
+		$invoiceMethod=$constantArray['postMethod'];
+		$invoicePath=$constantArray['invoiceUrl'];
+		$invoiceDataArray = array();
+		$invoiceDataArray['endAt'] = $endAt+1;
+		$invoiceRequest = Request::create($invoicePath,$invoiceMethod,$invoiceDataArray);
+		$updateResult = $invoiceController->update($invoiceRequest,json_decode($invoiceData)->invoiceId);
 		return $updateResult;
 	}
 	
@@ -848,19 +799,18 @@ class BillModel extends Model
 		$databaseName = $constantDatabase->constantDatabase();
 		//insert document data into sale-bill-document table
 		DB::beginTransaction();
-		$valuesArray = array($saleId, $documentName, $documentFormat, $documentType, $mytime);
-		$raw = $this->database->statement("insert into sales_bill_doc_dtl(
+		$raw = DB::connection($databaseName)->statement("insert into sales_bill_doc_dtl(
 		sale_id,
 		document_name,
 		document_format,
 		document_type,
 		created_at)
-		values(?, ?, ?, ?, ?);", $valuesArray);
+		values('".$saleId."','".$documentName."','".$documentFormat."','".$documentType."','".$mytime."')");
 		DB::commit();
 		
 		//get client-id from sale-bill
 		DB::beginTransaction();
-		$saleBillData = $this->database->select("SELECT 
+		$saleBillData = DB::connection($databaseName)->select("SELECT 
 		sale_id,
 		client_id
 		FROM sales_bill where sale_id='".$saleId."' and deleted_at='0000-00-00 00:00:00' and is_draft='no' and is_salesorder='not'");
@@ -868,15 +818,14 @@ class BillModel extends Model
 		
 		//insert document data into client-document table
 		DB::beginTransaction();
-		$valuesClient = array($saleId, $documentName, $documentFormat, $documentType, $saleBillData[0]->client_id, $mytime);
-		$clientDocumentInsertion = $this->database->statement("insert into client_doc_dtl(
+		$clientDocumentInsertion = DB::connection($databaseName)->statement("insert into client_doc_dtl(
 		sale_id,
 		document_name,
 		document_format,
 		document_type,
 		client_id,
 		created_at)
-		values(?, ?, ?, ?, ?, ?)", $valuesClient);
+		values('".$saleId."','".$documentName."','".$documentFormat."','".$documentType."','".$saleBillData[0]->client_id."','".$mytime."')");
 		DB::commit();
 		
 		//get exception message
@@ -907,7 +856,7 @@ class BillModel extends Model
 		//get exception message
 		$exception = new ExceptionMessage();
 		$exceptionArray = $exception->messageArrays();
-		$isSalesOrder = array_key_exists("isSalesOrder",$data) ? "s.is_salesorder='ok'" : "s.is_salesorder='not'";
+		$isSalesOrder = array_key_exists("isSalesOrder",$data) ? "is_salesorder='ok'" : "is_salesorder='not'";
 		if(is_object($data))
 		{
 			$salesType = $data->getSalesType();
@@ -916,102 +865,48 @@ class BillModel extends Model
 			$branch_check = "";
 			if ($data->getBranchId()) {
 				$branchId = $data->getBranchId();
-				$branch_check = " and s.branch_id = ".$branchId;
+				$branch_check = " and branch_id = ".$branchId;
 			}
 
-			if ($data->getIsSalesOrder()) {
-				$isSalesOrder = "s.is_salesorder='ok'";
-			}
 			DB::beginTransaction();
-			DB::statement('SET group_concat_max_len = 1000000');
-			$raw = $this->database->select("select 
-			s.sale_id,
-			s.product_array,
-			s.payment_mode,
-			s.bank_ledger_id,
-			s.bank_name,
-			s.invoice_number,
-			s.job_card_number,
-			s.check_number,
-			s.total,
-			s.total_discounttype,
-			s.total_discount,
-			s.total_cgst_percentage,
-			s.total_sgst_percentage,
-			s.total_igst_percentage,
-			s.extra_charge,
-			s.tax,
-			s.grand_total,
-			s.advance,
-			s.balance,
-			s.po_number,
-			s.user_id,
-			s.remark,
-			s.entry_date,
-			s.service_date,
-			s.dispatch_status,
-			s.client_id,
-			s.sales_type,
-			s.refund,
-			s.jf_id,
-			s.print_count,
-			s.company_id,
-			s.branch_id,
-			s.created_at,
-			s.updated_at,
-			e.expense,
-			d.file
-			from sales_bill as s 
-			LEFT JOIN (
-				SELECT 
-					sale_id, 
-					CONCAT(
-						'[', 
-							GROUP_CONCAT( CONCAT( 
-								'{\"saleExpenseId\":', sale_expense_id,
-								 	', \"expenseType\":\"', IFNULL(expense_type,''),
-								 	'\", \"expenseId\":', IFNULL(expense_id,0),
-								 	', \"expenseName\":\"', IFNULL(expense_name,''),
-								 	'\", \"expenseValue\":\"', IFNULL(expense_value,''),
-								 	'\", \"expenseTax\":\"', IFNULL(expense_tax,''),
-								 	'\", \"expenseOperation\":\"', IFNULL(expense_operation,''),
-								 	'\", \"saleId\":', IFNULL(sale_id,0),
-							 	' }'
-							 ) SEPARATOR ', '),
-						']'
-					) expense
-				FROM sale_expense_dtl
-				WHERE deleted_at='0000-00-00 00:00:00'
-				GROUP BY sale_id 
-			) e ON e.sale_id = s.sale_id
-
-			JOIN (
-				SELECT 
-					sale_id, 
-					CONCAT( 
-						'[', 
-							GROUP_CONCAT( CONCAT( 
-								'{\"documentId\":', document_id,
-								 	', \"saleId\":', IFNULL(sale_id,0),
-								 	', \"documentName\":\"', IFNULL(document_name,''),
-								 	'\", \"documentSize\":\"', IFNULL(document_size,''),
-								 	'\", \"documentFormat\":\"', IFNULL(document_format,''),
-								 	'\", \"documentType\":\"', IFNULL(document_type,''),
-								 	'\", \"createdAt\":\"', DATE_FORMAT(created_at, '%d-%m-%Y'),
-								 	'\", \"updatedAt\":\"', DATE_FORMAT(updated_at, '%d-%m-%Y'),
-							 	'\" }'
-							 ) SEPARATOR ', '),
-						']'
-					) file
-				FROM sales_bill_doc_dtl
-				WHERE deleted_at='0000-00-00 00:00:00'
-				GROUP BY sale_id 
-			) d ON d.sale_id = s.sale_id
-
-			where s.sales_type='".$salesType."' and
-			(s.entry_date BETWEEN '".$fromDate."' AND '".$toDate."') and 
-			s.company_id='".$companyId."' and 
-			s.deleted_at='0000-00-00 00:00:00' and s.is_draft='no' and ".$isSalesOrder.$branch_check);;
+			$raw = DB::connection($databaseName)->select("select 
+			sale_id,
+			product_array,
+			payment_mode,
+			bank_ledger_id,
+			bank_name,
+			invoice_number,
+			job_card_number,
+			check_number,
+			total,
+			total_discounttype,
+			total_discount,
+			total_cgst_percentage,
+			total_sgst_percentage,
+			total_igst_percentage,
+			extra_charge,
+			tax,
+			grand_total,
+			advance,
+			balance,
+			po_number,
+			user_id,
+			remark,
+			entry_date,
+			service_date,
+			client_id,
+			sales_type,
+			refund,
+			jf_id,
+			company_id,
+			branch_id,
+			created_at,
+			updated_at 
+			from sales_bill 
+			where sales_type='".$salesType."' and
+			(entry_date BETWEEN '".$fromDate."' AND '".$toDate."') and 
+			company_id='".$companyId."' and 
+			deleted_at='0000-00-00 00:00:00' and is_draft='no' and ".$isSalesOrder.$branch_check);
 			DB::commit();
 			if(count($raw)==0)
 			{
@@ -1019,103 +914,104 @@ class BillModel extends Model
 			}
 			else
 			{
-				return json_encode($raw);
+				$documentResult = array();
+				for($saleData=0;$saleData<count($raw);$saleData++)
+				{
+					$billExpenseResult = array();
+					//get expense sale data from database
+					DB::beginTransaction();
+					$billExpenseResult = DB::connection($databaseName)->select("select 
+					sale_expense_id as saleExpenseId,
+					expense_type as expenseType,
+					expense_id as expenseId,
+					expense_name as expenseName,
+					expense_value as expenseValue,
+					expense_operation as expenseOperation,
+					sale_id as saleId
+					from sale_expense_dtl
+					where deleted_at='0000-00-00 00:00:00' and
+					sale_id=".$raw[$saleData]->sale_id);
+					DB::commit();
+					$raw[$saleData]->expense = $billExpenseResult;
+
+					DB::beginTransaction();
+					$documentResult[$saleData] = DB::connection($databaseName)->select("select
+					document_id,
+					sale_id,
+					document_name,
+					document_size,
+					document_format,
+					document_type,
+					created_at,
+					updated_at
+					from sales_bill_doc_dtl
+					where sale_id='".$raw[$saleData]->sale_id."' and 
+					deleted_at='0000-00-00 00:00:00'");
+					DB::commit();
+					if(count($documentResult[$saleData])==0)
+					{
+						// return $exceptionArray['404'];
+						$documentResult[$saleData] = array();
+						$documentResult[$saleData][0] = new stdClass();
+						$documentResult[$saleData][0]->document_id = 0;
+						$documentResult[$saleData][0]->sale_id = 0;
+						$documentResult[$saleData][0]->document_name = '';
+						$documentResult[$saleData][0]->document_size = 0;
+						$documentResult[$saleData][0]->document_format = '';
+						$documentResult[$saleData][0]->document_type ='bill';
+						$documentResult[$saleData][0]->created_at = '0000-00-00 00:00:00';
+						$documentResult[$saleData][0]->updated_at = '0000-00-00 00:00:00';
+					}
+				}
+				$salesArrayData = array();
+				$salesArrayData['salesData'] = json_encode($raw);
+				$salesArrayData['documentData'] = json_encode($documentResult);
+				return json_encode($salesArrayData);
 			}
 		}
 		else if(is_array($data))
 		{
 			DB::beginTransaction();
-			DB::statement('SET group_concat_max_len = 1000000');
-			$raw = $this->database->select("select 
-			s.sale_id,
-			s.product_array,
-			s.payment_mode,
-			s.bank_ledger_id,
-			s.bank_name,
-			s.invoice_number,
-			s.job_card_number,
-			s.check_number,
-			s.total,
-			s.total_discounttype,
-			s.total_discount,
-			s.total_cgst_percentage,
-			s.total_sgst_percentage,
-			s.total_igst_percentage,
-			s.extra_charge,
-			s.tax,
-			s.grand_total,
-			s.advance,
-			s.balance,
-			s.po_number,
-			s.user_id,
-			s.remark,
-			s.entry_date,
-			s.service_date,
-			s.client_id,
-			s.dispatch_status,
-			s.sales_type,
-			s.refund,
-			s.jf_id,
-			s.print_count,
-			s.company_id,
-			s.branch_id,
-			s.created_at,
-			s.updated_at,
-			e.expense,
-			d.file
-			from sales_bill as s 
-			LEFT JOIN (
-				SELECT 
-					sale_id, 
-					CONCAT( 
-						'[', 
-							GROUP_CONCAT( CONCAT( 
-								'{\"saleExpenseId\":', sale_expense_id,
-								 	', \"expenseType\":\"', IFNULL(expense_type,''),
-								 	'\", \"expenseId\":', IFNULL(expense_id,0),
-								 	', \"expenseName\":\"', IFNULL(expense_name,''),
-								 	'\", \"expenseValue\":\"', IFNULL(expense_value,''),
-								 	'\", \"expenseTax\":\"', IFNULL(expense_tax,''),
-								 	'\", \"expenseOperation\":\"', IFNULL(expense_operation,''),
-								 	'\", \"saleId\":', IFNULL(sale_id,0),
-							 	' }'
-							 ) SEPARATOR ', '),
-						']'
-					) expense
-				FROM sale_expense_dtl
-				WHERE deleted_at='0000-00-00 00:00:00'
-				GROUP BY sale_id 
-			) e ON e.sale_id = s.sale_id
-
-			LEFT JOIN (
-				SELECT 
-					sale_id, 
-					CONCAT( 
-						'[', 
-							GROUP_CONCAT( CONCAT( 
-								'{\"documentId\":', document_id,
-								 	', \"saleId\":', IFNULL(sale_id,0),
-								 	', \"documentName\":\"', IFNULL(document_name,''),
-								 	'\", \"documentSize\":\"', IFNULL(document_size,''),
-								 	'\", \"documentFormat\":\"', IFNULL(document_format,''),
-								 	'\", \"documentType\":\"', IFNULL(document_type,''),
-								 	'\", \"createdAt\":\"', DATE_FORMAT(created_at, '%d-%m-%Y'),
-								 	'\", \"updatedAt\":\"', DATE_FORMAT(updated_at, '%d-%m-%Y'),
-							 	'\" }'
-							 ) SEPARATOR ', '),
-						']'
-					) file
-				FROM sales_bill_doc_dtl
-				WHERE deleted_at='0000-00-00 00:00:00'
-				GROUP BY sale_id 
-			) d ON d.sale_id = s.sale_id
-
-			where s.sales_type='".$data['salestype'][0]."' 
-			and s.is_draft='no' and 
+			$raw = DB::connection($databaseName)->select("select 
+			sale_id,
+			product_array,
+			payment_mode,
+			bank_ledger_id,
+			bank_name,
+			invoice_number,
+			job_card_number,
+			check_number,
+			total,
+			total_discounttype,
+			total_discount,
+			total_cgst_percentage,
+			total_sgst_percentage,
+			total_igst_percentage,
+			extra_charge,
+			tax,
+			grand_total,
+			advance,
+			balance,
+			po_number,
+			user_id,
+			remark,
+			entry_date,
+			service_date,
+			client_id,
+			sales_type,
+			refund,
+			jf_id,
+			company_id,
+			branch_id,
+			created_at,
+			updated_at 
+			from sales_bill 
+			where sales_type='".$data['salestype'][0]."' 
+			and is_draft='no' and 
 			".$isSalesOrder." and 
-			s.company_id='".$companyId."' and 
-			s.deleted_at='0000-00-00 00:00:00' and 
-			(s.invoice_number='".$data['invoicenumber'][0]."' or s.client_id in ( select client_id from client_mst where contact_no = '".$data['invoicenumber'][0]."') or s.client_id in ( select client_id from client_mst where email_id = '".$data['invoicenumber'][0]."') or s.client_id in ( select client_id from client_mst where client_name like '%".$data['invoicenumber'][0]."%')) ");
+			company_id='".$companyId."' and 
+			deleted_at='0000-00-00 00:00:00' and 
+			(invoice_number='".$data['invoicenumber'][0]."' or client_id in ( select client_id from client_mst where contact_no = '".$data['invoicenumber'][0]."') or client_id in ( select client_id from client_mst where email_id = '".$data['invoicenumber'][0]."') or client_id in ( select client_id from client_mst where client_name like '%".$data['invoicenumber'][0]."%')) ");
 			DB::commit();
 			if(count($raw)==0)
 			{
@@ -1123,7 +1019,58 @@ class BillModel extends Model
 			}
 			else
 			{
-				return json_encode($raw);
+				$documentResult = array();
+				for($saleData=0;$saleData<count($raw);$saleData++)
+				{
+					$billExpenseResult = array();
+					//get expense sale data from database
+					DB::beginTransaction();
+					$billExpenseResult = DB::connection($databaseName)->select("select 
+					sale_expense_id as saleExpenseId,
+					expense_type as expenseType,
+					expense_id as expenseId,
+					expense_name as expenseName,
+					expense_value as expenseValue,
+					expense_operation as expenseOperation,
+					sale_id as saleId
+					from sale_expense_dtl
+					where deleted_at='0000-00-00 00:00:00' and
+					sale_id=".$raw[$saleData]->sale_id);
+					DB::commit();
+					$raw[$saleData]->expense  = $billExpenseResult;
+					DB::beginTransaction();
+					$documentResult[$saleData] = DB::connection($databaseName)->select("select
+					document_id,
+					sale_id,
+					document_name,
+					document_size,
+					document_format,
+					document_type,
+					created_at,
+					updated_at
+					from sales_bill_doc_dtl
+					where sale_id='".$raw[$saleData]->sale_id."' and 
+					deleted_at='0000-00-00 00:00:00'");
+					DB::commit();
+					if(count($documentResult[$saleData])==0)
+					{
+						// return $exceptionArray['404'];
+						$documentResult[$saleData] = array();
+						$documentResult[$saleData][0] = new stdClass();
+						$documentResult[$saleData][0]->document_id = 0;
+						$documentResult[$saleData][0]->sale_id = 0;
+						$documentResult[$saleData][0]->document_name = '';
+						$documentResult[$saleData][0]->document_size = 0;
+						$documentResult[$saleData][0]->document_format = '';
+						$documentResult[$saleData][0]->document_type ='bill';
+						$documentResult[$saleData][0]->created_at = '0000-00-00 00:00:00';
+						$documentResult[$saleData][0]->updated_at = '0000-00-00 00:00:00';
+					}
+				}
+				$salesArrayData = array();
+				$salesArrayData['salesData'] = json_encode($raw);
+				$salesArrayData['documentData'] = json_encode($documentResult);
+				return json_encode($salesArrayData);
 			}
 		}
 	}
@@ -1145,7 +1092,7 @@ class BillModel extends Model
 		$exceptionArray = $exception->messageArrays();
 		
 		DB::beginTransaction();
-		$raw = $this->database->select("select 
+		$raw = DB::connection($databaseName)->select("select 
 		sale_id,
 		product_array,
 		payment_mode,
@@ -1176,7 +1123,6 @@ class BillModel extends Model
 		company_id,
 		branch_id,
 		jf_id,
-		print_count,
 		created_at,
 		updated_at 
 		from sales_bill 
@@ -1194,13 +1140,12 @@ class BillModel extends Model
 				$billExpenseResult = array();
 				//get expense sale data from database
 				DB::beginTransaction();
-				$billExpenseResult = $this->database->select("select 
+				$billExpenseResult = DB::connection($databaseName)->select("select 
 				sale_expense_id as saleExpenseId,
 				expense_type as expenseType,
 				expense_id as expenseId,
 				expense_name as expenseName,
 				expense_value as expenseValue,
-				expense_tax as expenseTax,
 				expense_operation as expenseOperation,
 				sale_id as saleId
 				from sale_expense_dtl
@@ -1221,12 +1166,16 @@ class BillModel extends Model
 	*/
 	public function getSaleIdData($saleId)
 	{
-		
 		//database selection
+		$database = "";
+		$constantDatabase = new ConstantClass();
+		$databaseName = $constantDatabase->constantDatabase();
 		
-		$exceptionArray = $this->messages;
+		//get exception message
+		$exception = new ExceptionMessage();
+		$exceptionArray = $exception->messageArrays();
 		DB::beginTransaction();
-		$raw = $this->database->select("select 
+		$raw = DB::connection($databaseName)->select("select 
 		sale_id,
 		product_array,
 		payment_mode,
@@ -1257,13 +1206,13 @@ class BillModel extends Model
 		company_id,
 		branch_id,
 		jf_id,
-		print_count,
 		created_at,
 		updated_at 
 		from sales_bill 
 		where sale_id='".$saleId."' and 
 		deleted_at='0000-00-00 00:00:00' and is_draft='no'");
 		DB::commit();
+		
 		if(count($raw)==0)
 		{
 			return $exceptionArray['404']; 
@@ -1272,13 +1221,12 @@ class BillModel extends Model
 		{
 			//get latest expense sale data from database
 			DB::beginTransaction();
-			$billExpenseResult = $this->database->select("select 
+			$billExpenseResult = DB::connection($databaseName)->select("select 
 			sale_expense_id as saleExpenseId,
 			expense_type as expenseType,
 			expense_id as expenseId,
 			expense_name as expenseName,
 			expense_value as expenseValue,
-			expense_tax as expenseTax,
 			expense_operation as expenseOperation,
 			sale_id as saleId
 			from sale_expense_dtl
@@ -1308,7 +1256,7 @@ class BillModel extends Model
 		$exceptionArray = $exception->messageArrays();
 		
 		DB::beginTransaction();
-		$raw = $this->database->select("select 
+		$raw = DB::connection($databaseName)->select("select 
 		sale_id,
 		product_array,
 		payment_mode,
@@ -1339,7 +1287,6 @@ class BillModel extends Model
 		company_id,
 		branch_id,
 		jf_id,
-		print_count,
 		created_at,
 		updated_at 
 		from sales_bill 
@@ -1354,13 +1301,12 @@ class BillModel extends Model
 		{
 			//get latest expense sale data from database
 			DB::beginTransaction();
-			$billExpenseResult = $this->database->select("select 
+			$billExpenseResult = DB::connection($databaseName)->select("select 
 			sale_expense_id as saleExpenseId,
 			expense_type as expenseType,
 			expense_id as expenseId,
 			expense_name as expenseName,
 			expense_value as expenseValue,
-			expense_tax as expenseTax,
 			expense_operation as expenseOperation,
 			sale_id as saleId
 			from sale_expense_dtl
@@ -1389,7 +1335,7 @@ class BillModel extends Model
 		$exception = new ExceptionMessage();
 		$exceptionArray = $exception->messageArrays();
 		DB::beginTransaction();
-		$raw = $this->database->select("select 
+		$raw = DB::connection($databaseName)->select("select 
 		sale_id,
 		product_array,
 		payment_mode,
@@ -1420,7 +1366,6 @@ class BillModel extends Model
 		company_id,
 		branch_id,
 		jf_id,
-		print_count,
 		created_at,
 		updated_at 
 		from sales_bill 
@@ -1430,13 +1375,12 @@ class BillModel extends Model
 
 		//get latest expense sale data from database
 		DB::beginTransaction();
-		$billExpenseResult = $this->database->select("select 
+		$billExpenseResult = DB::connection($databaseName)->select("select 
 		sale_expense_id as saleExpenseId,
 		expense_type as expenseType,
 		expense_id as expenseId,
 		expense_name as expenseName,
 		expense_value as expenseValue,
-		expense_tax as expenseTax,
 		expense_operation as expenseOperation,
 		sale_id as saleId
 		from sale_expense_dtl
@@ -1462,7 +1406,7 @@ class BillModel extends Model
 	 * @param  header-data
 	 * returns the exception-message/sales data
 	*/
-	public function getPreviousNextData($headerData) #done
+	public function getPreviousNextData($headerData)
 	{
 		//database selection
 		$database = "";
@@ -1472,127 +1416,288 @@ class BillModel extends Model
 		// get exception message
 		$exception = new ExceptionMessage();
 		$exceptionArray = $exception->messageArrays();
-		$isSalesOrder =  array_key_exists("issalesorder",$headerData) ? "and s.is_salesorder='ok'" : "and s.is_salesorder='not'";
-		$salesType =  array_key_exists("issalesorder",$headerData) ? "":"s.sales_type='".$headerData['salestype'][0]."' and";
-		$nextPreviousWhere = '';
-		$orderBy = '';
-		$limit = 'limit 1';
-		if (array_key_exists('previoussaleid',$headerData)) {
-			$nextPreviousWhere = $headerData['previoussaleid'][0]==0 ? '' : ' and s.sale_id < '.$headerData['previoussaleid'][0];
-			$orderBy = 'order by s.sale_id desc';
-		}elseif (array_key_exists('nextsaleid',$headerData)) {
-			$nextPreviousWhere = $headerData['nextsaleid'][0]==0 ? '' : ' and s.sale_id > '.$headerData['nextsaleid'][0];
-			$orderBy = 'order by s.sale_id asc';
-		}elseif(array_key_exists('operation',$headerData)) {
-			$nextPreviousWhere = '';
-			if (strcmp($headerData['operation'][0],'first')==0) {
-				$orderBy = 'order by s.sale_id asc';
-			}elseif (strcmp($headerData['operation'][0],'last')==0) {
-				$orderBy = 'order by s.sale_id desc';
-			}else{
-				return $exceptionArray['204'];
-			}
-		}else{
-			$limit = '';
-		}
-		
-		DB::beginTransaction();
-		DB::statement('SET group_concat_max_len = 1000000');
-		$raw = $this->database->select("select 
-		s.sale_id,
-		s.product_array,
-		s.payment_mode,
-		s.bank_ledger_id,
-		s.bank_name,
-		s.invoice_number,
-		s.job_card_number,
-		s.check_number,
-		s.total,
-		s.total_discounttype,
-		s.total_discount,
-		s.total_cgst_percentage,
-		s.total_sgst_percentage,
-		s.total_igst_percentage,
-		s.extra_charge,
-		s.tax,
-		s.grand_total,
-		s.advance,
-		s.balance,
-		s.po_number,
-		s.user_id,
-		s.remark,
-		s.entry_date,
-		s.service_date,
-		s.client_id,
-		s.sales_type,
-		s.refund,
-		s.jf_id,
-		s.print_count,
-		s.company_id,
-		s.branch_id,
-		s.created_at,
-		s.updated_at,
-		e.expense,
-		d.file
-		from sales_bill as s 
-		LEFT JOIN (
-			SELECT 
-				sale_id, 
-				CONCAT( 
-					'[', 
-						GROUP_CONCAT( CONCAT( 
-							'{\"saleExpenseId\":', sale_expense_id,
-							 	', \"expenseType\":\"', IFNULL(expense_type,''),
-							 	'\", \"expenseId\":', IFNULL(expense_id,0),
-							 	', \"expenseName\":\"', IFNULL(expense_name,''),
-							 	'\", \"expenseValue\":\"', IFNULL(expense_value,''),
-							 	'\", \"expenseTax\":\"', IFNULL(expense_tax,''),
-							 	'\", \"expenseOperation\":\"', IFNULL(expense_operation,''),
-							 	'\", \"saleId\":', IFNULL(sale_id,0),
-						 	' }'
-						 ) SEPARATOR ', '),
-					']'
-				) expense
-			FROM sale_expense_dtl
-			WHERE deleted_at='0000-00-00 00:00:00'
-			GROUP BY sale_id 
-		) e ON e.sale_id = s.sale_id
-
-		LEFT JOIN (
-			SELECT 
-				sale_id, 
-				CONCAT( 
-					'[', 
-						GROUP_CONCAT( CONCAT( 
-							'{\"documentId\":', document_id,
-							 	', \"saleId\":', IFNULL(sale_id,0),
-							 	', \"documentName\":\"', IFNULL(document_name,''),
-							 	'\", \"documentSize\":\"', IFNULL(document_size,''),
-							 	'\", \"documentFormat\":\"', IFNULL(document_format,''),
-							 	'\", \"documentType\":\"', IFNULL(document_type,''),
-							 	'\", \"createdAt\":\"', DATE_FORMAT(created_at, '%d-%m-%Y'),
-							 	'\", \"updatedAt\":\"', DATE_FORMAT(updated_at, '%d-%m-%Y'),
-						 	'\" }'
-						 ) SEPARATOR ', '),
-					']'
-				) file
-			FROM sales_bill_doc_dtl
-			WHERE deleted_at='0000-00-00 00:00:00'
-			GROUP BY sale_id 
-		) d ON d.sale_id = s.sale_id
-
-		where ".$salesType."
-		s.company_id = '".$headerData['companyid'][0]."' and
-		s.deleted_at='0000-00-00 00:00:00' and s.is_draft='no' ".$isSalesOrder.$nextPreviousWhere."
-		".$orderBy." ".$limit);
-		DB::commit();
-		if(count($raw)==0)
+		$isSalesOrder =  array_key_exists("issalesorder",$headerData) ? "and is_salesorder='ok'" : "and is_salesorder='not'";
+		$salesType =  array_key_exists("issalesorder",$headerData) ? "":"sales_type='".$headerData['salestype'][0]."' and";
+		if(array_key_exists('previoussaleid',$headerData))
 		{
-			return $exceptionArray['204'];
+			if($headerData['previoussaleid'][0]==0)
+			{
+				DB::beginTransaction();
+				$raw = DB::connection($databaseName)->select("select 
+				sale_id,
+				product_array,
+				payment_mode,
+				bank_ledger_id,
+				bank_name,
+				invoice_number,
+				check_number,
+				job_card_number,
+				total,
+				total_discounttype,
+				total_discount,
+				total_cgst_percentage,
+				total_sgst_percentage,
+				total_igst_percentage,
+				extra_charge,
+				tax,
+				grand_total,
+				advance,
+				balance,
+				po_number,
+				user_id,
+				remark,
+				entry_date,
+				service_date,
+				client_id,
+				sales_type,
+				refund,
+				company_id,
+				branch_id,
+				jf_id,
+				created_at,
+				updated_at 
+				from sales_bill 
+				where ".$salesType."
+				company_id = '".$headerData['companyid'][0]."' and
+				deleted_at='0000-00-00 00:00:00' and is_draft='no' ".$isSalesOrder."
+				order by sale_id desc limit 1");
+				DB::commit();
+				if(count($raw)==0)
+				{
+					return $exceptionArray['204'];
+				}
+				else
+				{
+					$saleDataResult = $this->getDocumentData($raw);
+					return $saleDataResult;
+				}
+			}
+			else
+			{
+				$saleId = $headerData['previoussaleid'][0]-1;
+				$result = $this->getSalePreviousNextData($headerData,$saleId);
+				if(count($result)==0)
+				{
+					DB::beginTransaction();
+					$previousAscId = DB::connection($databaseName)->select("select 
+					sale_id
+					from sales_bill 
+					where ".$salesType."
+					company_id = '".$headerData['companyid'][0]."' and
+					deleted_at='0000-00-00 00:00:00' and is_draft='no' ".$isSalesOrder."
+					order by sale_id asc limit 1");
+					DB::commit();
+					if($saleId<$previousAscId[0]->sale_id)
+					{
+						return $exceptionArray['204'];
+					}
+					else
+					{
+						for($arrayData=$saleId-1;$arrayData>=$previousAscId[0]->sale_id;$arrayData--)
+						{
+							$innerResult = $this->getSalePreviousNextData($headerData,$arrayData);
+							if(count($innerResult)!=0)
+							{
+								break;
+							}
+							if($arrayData==$previousAscId[0]->sale_id && count($innerResult)==0)
+							{
+								return $exceptionArray['204'];
+							}
+							$saleId++;
+						}
+						$saleDataResult = $this->getDocumentData($innerResult);
+						return $saleDataResult;
+					}
+				}
+				else
+				{
+					$saleDataResult = $this->getDocumentData($result);
+					return $saleDataResult;
+				}
+			}
+		}
+		else if(array_key_exists('nextsaleid',$headerData))
+		{
+			$saleId = $headerData['nextsaleid'][0]+1;
+			$result = $this->getSalePreviousNextData($headerData,$saleId);
+			if(count($result)==0)
+			{
+				DB::beginTransaction();
+				$nextDescId = DB::connection($databaseName)->select("select 
+				sale_id
+				from sales_bill 
+				where ".$salesType."
+				company_id = '".$headerData['companyid'][0]."' and
+				deleted_at='0000-00-00 00:00:00' and is_draft='no' ".$isSalesOrder."
+				order by sale_id desc limit 1");
+				DB::commit();
+				if($saleId>$nextDescId[0]->sale_id)
+				{
+					return $exceptionArray['204'];
+				}
+				else
+				{
+					for($arrayData=$saleId+1;$arrayData<=$nextDescId[0]->sale_id;$arrayData++)
+					{
+						$innerResult = $this->getSalePreviousNextData($headerData,$arrayData);
+						if(count($innerResult)!=0)
+						{
+							break;
+						}
+						if($arrayData==$nextDescId[0]->sale_id && count($innerResult)==0)
+						{
+							return $exceptionArray['204'];
+						}
+						$saleId++;
+					}
+					$saleDataResult = $this->getDocumentData($innerResult);
+					return $saleDataResult;
+				}
+			}
+			else
+			{
+				$saleDataResult = $this->getDocumentData($result);
+				return $saleDataResult;
+			}
+		}
+		else if(array_key_exists('operation',$headerData))
+		{
+			if(strcmp($headerData['operation'][0],'first')==0)
+			{
+				DB::beginTransaction();
+				$fistSaleDataResult = DB::connection($databaseName)->select("select 
+				sale_id,
+				product_array,
+				payment_mode,
+				bank_ledger_id,
+				bank_name,
+				invoice_number,
+				job_card_number,
+				check_number,
+				total,
+				total_discounttype,
+				total_discount,
+				total_cgst_percentage,
+				total_sgst_percentage,
+				total_igst_percentage,
+				extra_charge,
+				tax,
+				grand_total,
+				advance,
+				balance,
+				po_number,
+				user_id,
+				remark,
+				entry_date,
+				service_date,
+				client_id,
+				sales_type,
+				refund,
+				company_id,
+				branch_id,
+				jf_id,
+				created_at,
+				updated_at 
+				from sales_bill 
+				where ".$salesType."
+				company_id = '".$headerData['companyid'][0]."' and
+				deleted_at='0000-00-00 00:00:00' and is_draft='no' ".$isSalesOrder." order by sale_id asc limit 1");
+				DB::commit();
+				
+				$saleDataResult = $this->getDocumentData($fistSaleDataResult);
+				return $saleDataResult;
+			}
+			else if(strcmp($headerData['operation'][0],'last')==0)
+			{
+				DB::beginTransaction();
+				$lastSaleDataResult = DB::connection($databaseName)->select("select 
+				sale_id,
+				product_array,
+				payment_mode,
+				bank_ledger_id,
+				bank_name,
+				invoice_number,
+				job_card_number,
+				check_number,
+				total,
+				total_discounttype,
+				total_discount,
+				total_cgst_percentage,
+				total_sgst_percentage,
+				total_igst_percentage,
+				extra_charge,
+				tax,
+				grand_total,
+				advance,
+				balance,
+				po_number,
+				user_id,
+				remark,
+				entry_date,
+				service_date,
+				client_id,
+				sales_type,
+				refund,
+				company_id,
+				branch_id,
+				jf_id,
+				created_at,
+				updated_at 
+				from sales_bill 
+				where ".$salesType."
+				company_id = '".$headerData['companyid'][0]."' and
+				deleted_at='0000-00-00 00:00:00' and is_draft='no' ".$isSalesOrder." order by sale_id desc limit 1");
+				DB::commit();
+				
+				$saleDataResult = $this->getDocumentData($lastSaleDataResult);
+				return $saleDataResult;
+			}
 		}
 		else
 		{
-			return json_encode($raw);
+			DB::beginTransaction();
+			$allSalesOrderData = DB::connection($databaseName)->select("select 
+			sale_id,
+			product_array,
+			payment_mode,
+			bank_ledger_id,
+			bank_name,
+			invoice_number,
+			job_card_number,
+			check_number,
+			total,
+			total_discounttype,
+			total_discount,
+			total_cgst_percentage,
+			total_sgst_percentage,
+			total_igst_percentage,
+			extra_charge,
+			tax,
+			grand_total,
+			advance,
+			balance,
+			po_number,
+			user_id,
+			remark,
+			entry_date,
+			service_date,
+			client_id,
+			sales_type,
+			refund,
+			company_id,
+			branch_id,
+			jf_id,
+			created_at,
+			updated_at 
+			from sales_bill 
+			where ".$salesType."
+			company_id = '".$headerData['companyid'][0]."' and
+			deleted_at='0000-00-00 00:00:00' ".$isSalesOrder);
+			DB::commit();
+			
+			$saleDataResult = $this->getDocumentData($allSalesOrderData);
+			return $saleDataResult;
 		}
 	}
 	
@@ -1610,7 +1715,7 @@ class BillModel extends Model
 		$isSalesOrder =  array_key_exists("issalesorder",$headerData) ? "and is_salesorder='ok'" : "and is_salesorder='not'";
 		$salesType =  array_key_exists("issalesorder",$headerData) ? "" :"sales_type='".$headerData['salestype'][0]."' and";
 		DB::beginTransaction();
-		$saleData = $this->database->select("select 
+		$saleData = DB::connection($databaseName)->select("select 
 		sale_id,
 		product_array,
 		payment_mode,
@@ -1641,7 +1746,6 @@ class BillModel extends Model
 		company_id,
 		branch_id,
 		jf_id,
-		print_count,
 		created_at,
 		updated_at 
 		from sales_bill 
@@ -1651,214 +1755,6 @@ class BillModel extends Model
 		sale_id='".$saleId."' and is_draft='no' ".$isSalesOrder);
 		DB::commit();
 		return $saleData;
-	}
-
-	public function getBillById($id)
-	{
-		//database selection
-		$database = "";
-		$constantDatabase = new ConstantClass();
-		$databaseName = $constantDatabase->constantDatabase();
-		DB::beginTransaction();
-		DB::statement('SET group_concat_max_len = 1000000');
-		$raw = $this->database->select("SELECT 
-		s.sale_id,
-		s.product_array,
-		s.payment_mode,
-		s.bank_ledger_id,
-		s.bank_name,
-		s.invoice_number,
-		s.job_card_number,
-		s.check_number,
-		s.total,
-		s.total_discounttype,
-		s.total_discount,
-		s.total_cgst_percentage,
-		s.total_sgst_percentage,
-		s.total_igst_percentage,
-		s.extra_charge,
-		s.tax,
-		s.grand_total,
-		s.advance,
-		s.balance,
-		s.po_number,
-		s.user_id,
-		s.remark,
-		s.entry_date,
-		s.service_date,
-		s.client_id,
-		s.sales_type,
-		s.refund,
-		s.jf_id,
-		s.print_count,
-		s.company_id,
-		s.branch_id,
-		s.created_at,
-		s.updated_at,
-		e.expense,
-		d.file
-		from `sales_bill` as `s` 
-		LEFT JOIN (
-			SELECT 
-				sale_id, 
-				CONCAT( 
-					'[', 
-						GROUP_CONCAT( CONCAT( 
-							'{\"saleExpenseId\":', sale_expense_id,
-							 	', \"expenseType\":\"', IFNULL(expense_type,''),
-							 	'\", \"expenseId\":', IFNULL(expense_id,0),
-							 	', \"expenseName\":\"', IFNULL(expense_name,''),
-							 	'\", \"expenseValue\":\"', IFNULL(expense_value,''),
-							 	'\", \"expenseTax\":\"', IFNULL(expense_tax,''),
-							 	'\", \"expenseOperation\":\"', IFNULL(expense_operation,''),
-							 	'\", \"saleId\":', IFNULL(sale_id,0),
-						 	' }'
-						 ) SEPARATOR ', '),
-					']'
-				) expense
-			FROM sale_expense_dtl
-			WHERE deleted_at='0000-00-00 00:00:00'
-			GROUP BY sale_id 
-		) e ON e.sale_id = s.sale_id
-
-		LEFT JOIN (
-			SELECT 
-				sale_id, 
-				CONCAT( 
-					'[', 
-						GROUP_CONCAT( CONCAT( 
-							'{\"documentId\":', document_id,
-							 	', \"saleId\":', IFNULL(sale_id,0),
-							 	', \"documentName\":\"', IFNULL(document_name,''),
-							 	'\", \"documentSize\":\"', IFNULL(document_size,''),
-							 	'\", \"documentFormat\":\"', IFNULL(document_format,''),
-							 	'\", \"documentType\":\"', IFNULL(document_type,''),
-							 	'\", \"createdAt\":\"', DATE_FORMAT(created_at, '%d-%m-%Y'),
-							 	'\", \"updatedAt\":\"', DATE_FORMAT(updated_at, '%d-%m-%Y'),
-						 	'\" }'
-						 ) SEPARATOR ', '),
-					']'
-				) file
-			FROM sales_bill_doc_dtl
-			WHERE deleted_at='0000-00-00 00:00:00'
-			GROUP BY sale_id 
-		) d ON d.sale_id = s.sale_id
-		where s.sale_id = '$id' and
-				deleted_at='0000-00-00 00:00:00'");
-		DB::commit();
-		return json_encode($raw);
-	}
-
-	public function getBillMonthwise()
-	{
-		//database selection
-		$database = "";
-		$constantDatabase = new ConstantClass();
-		$databaseName = $constantDatabase->constantDatabase();
-		DB::beginTransaction();
-		DB::statement('SET group_concat_max_len = 1000000');
-		$raw = $this->database->select("SELECT 
-		concat(YEAR(service_date),'-',MONTH(service_date)) as Month,
-		sum(total) as Total,
-		sum(total_discount) as totalDiscount,
-		sum(extra_charge) as extraCharge,
-		sum(tax) as Tax,
-		sum(grand_total) as grandTotal,
-		sum(advance) as Advance,
-		sum(balance) as Balance,
-		sum(refund) as Refund  FROM `sales_bill` GROUP BY MONTH(service_date), YEAR(service_date)");
-		DB::commit();
-		foreach($raw as $data)
-		{
-			$month = explode("-",$data->Month)[1];
-			$year = explode("-",$data->Month)[0];
-			$data->Month = date('F-Y',strtotime($data->Month."-01"));
-			$data->sale = $this->database->select("SELECT 
-				s.sale_id,
-				s.product_array,
-				s.payment_mode,
-				s.bank_ledger_id,
-				s.bank_name,
-				s.invoice_number,
-				s.job_card_number,
-				s.check_number,
-				s.total,
-				s.total_discounttype,
-				s.total_discount,
-				s.total_cgst_percentage,
-				s.total_sgst_percentage,
-				s.total_igst_percentage,
-				s.extra_charge,
-				s.tax,
-				s.grand_total,
-				s.advance,
-				s.balance,
-				s.po_number,
-				s.user_id,
-				s.remark,
-				s.entry_date,
-				s.service_date,
-				s.client_id,
-				s.sales_type,
-				s.refund,
-				s.jf_id,
-				s.print_count,
-				s.company_id,
-				s.branch_id,
-				s.created_at,
-				s.updated_at,
-				e.expense,
-				d.file
-				from `sales_bill` as `s` 
-				LEFT JOIN (
-					SELECT 
-						sale_id, 
-						CONCAT( 
-							'[', 
-								GROUP_CONCAT( CONCAT( 
-									'{\"saleExpenseId\":', sale_expense_id,
-									 	', \"expenseType\":\"', IFNULL(expense_type,''),
-									 	'\", \"expenseId\":', IFNULL(expense_id,0),
-									 	', \"expenseName\":\"', IFNULL(expense_name,''),
-									 	'\", \"expenseValue\":\"', IFNULL(expense_value,''),
-									 	'\", \"expenseTax\":\"', IFNULL(expense_tax,''),
-									 	'\", \"expenseOperation\":\"', IFNULL(expense_operation,''),
-									 	'\", \"saleId\":', IFNULL(sale_id,0),
-								 	' }'
-								 ) SEPARATOR ', '),
-							']'
-						) expense
-					FROM sale_expense_dtl
-					WHERE deleted_at='0000-00-00 00:00:00'
-					GROUP BY sale_id 
-				) e ON e.sale_id = s.sale_id
-
-				LEFT JOIN (
-					SELECT 
-						sale_id, 
-						CONCAT( 
-							'[', 
-								GROUP_CONCAT( CONCAT( 
-									'{\"documentId\":', document_id,
-									 	', \"saleId\":', IFNULL(sale_id,0),
-									 	', \"documentName\":\"', IFNULL(document_name,''),
-									 	'\", \"documentSize\":\"', IFNULL(document_size,''),
-									 	'\", \"documentFormat\":\"', IFNULL(document_format,''),
-									 	'\", \"documentType\":\"', IFNULL(document_type,''),
-									 	'\", \"createdAt\":\"', DATE_FORMAT(created_at, '%d-%m-%Y'),
-									 	'\", \"updatedAt\":\"', DATE_FORMAT(updated_at, '%d-%m-%Y'),
-								 	'\" }'
-								 ) SEPARATOR ', '),
-							']'
-						) file
-					FROM sales_bill_doc_dtl
-					WHERE deleted_at='0000-00-00 00:00:00'
-					GROUP BY sale_id 
-				) d ON d.sale_id = s.sale_id
-				where MONTH(service_date)=$month and YEAR(service_date)=$year and deleted_at='0000-00-00 00:00:00'");
-				DB::commit();
-		}
-		return json_encode($raw);
 	}
 	/**
 	 * get previous bill data
@@ -1872,93 +1768,45 @@ class BillModel extends Model
 		$constantDatabase = new ConstantClass();
 		$databaseName = $constantDatabase->constantDatabase();
 		DB::beginTransaction();
-		DB::statement('SET group_concat_max_len = 1000000');
-		$raw = $this->database->select("select 
-		s.sale_id,
-		s.product_array,
-		s.payment_mode,
-		s.bank_ledger_id,
-		s.bank_name,
-		s.invoice_number,
-		s.job_card_number,
-		s.check_number,
-		s.total,
-		s.total_discounttype,
-		s.total_discount,
-		s.total_cgst_percentage,
-		s.total_sgst_percentage,
-		s.total_igst_percentage,
-		s.extra_charge,
-		s.tax,
-		s.grand_total,
-		s.advance,
-		s.balance,
-		s.po_number,
-		s.user_id,
-		s.remark,
-		s.entry_date,
-		s.service_date,
-		s.client_id,
-		s.sales_type,
-		s.refund,
-		s.jf_id,
-		s.print_count,
-		s.company_id,
-		s.branch_id,
-		s.created_at,
-		s.updated_at,
-		e.expense,
-		d.file
-		from sales_bill as s 
-		LEFT JOIN (
-			SELECT 
-				sale_id, 
-				CONCAT( 
-					'[', 
-						GROUP_CONCAT( CONCAT( 
-							'{\"saleExpenseId\":', sale_expense_id,
-							 	', \"expenseType\":\"', IFNULL(expense_type,''),
-							 	'\", \"expenseId\":', IFNULL(expense_id,0),
-							 	', \"expenseName\":\"', IFNULL(expense_name,''),
-							 	'\", \"expenseValue\":\"', IFNULL(expense_value,''),
-							 	'\", \"expenseTax\":\"', IFNULL(expense_tax,''),
-							 	'\", \"expenseOperation\":\"', IFNULL(expense_operation,''),
-							 	'\", \"saleId\":', IFNULL(sale_id,0),
-						 	' }'
-						 ) SEPARATOR ', '),
-					']'
-				) expense
-			FROM sale_expense_dtl
-			WHERE deleted_at='0000-00-00 00:00:00'
-			GROUP BY sale_id 
-		) e ON e.sale_id = s.sale_id
-
-		LEFT JOIN (
-			SELECT 
-				sale_id, 
-				CONCAT( 
-					'[', 
-						GROUP_CONCAT( CONCAT( 
-							'{\"documentId\":', document_id,
-							 	', \"saleId\":', IFNULL(sale_id,0),
-							 	', \"documentName\":\"', IFNULL(document_name,''),
-							 	'\", \"documentSize\":\"', IFNULL(document_size,''),
-							 	'\", \"documentFormat\":\"', IFNULL(document_format,''),
-							 	'\", \"documentType\":\"', IFNULL(document_type,''),
-							 	'\", \"createdAt\":\"', DATE_FORMAT(created_at, '%d-%m-%Y'),
-							 	'\", \"updatedAt\":\"', DATE_FORMAT(updated_at, '%d-%m-%Y'),
-						 	'\" }'
-						 ) SEPARATOR ', '),
-					']'
-				) file
-			FROM sales_bill_doc_dtl
-			WHERE deleted_at='0000-00-00 00:00:00'
-			GROUP BY sale_id 
-		) d ON d.sale_id = s.sale_id
-		where s.company_id = '$companyId' and s.jf_id = '$jfId' and
+		$saleData = DB::connection($databaseName)->select("select 
+		sale_id,
+		product_array,
+		payment_mode,
+		bank_ledger_id,
+		bank_name,
+		invoice_number,
+		job_card_number,
+		check_number,
+		total,
+		total_discounttype,
+		total_discount,
+		total_cgst_percentage,
+		total_sgst_percentage,
+		total_igst_percentage,
+		extra_charge,
+		tax,
+		grand_total,
+		advance,
+		balance,
+		po_number,
+		user_id,
+		remark,
+		entry_date,
+		service_date,
+		client_id,
+		sales_type,
+		refund,
+		company_id,
+		branch_id,
+		jf_id,
+		created_at,
+		updated_at 
+		from sales_bill 
+		where company_id = '$companyId' and jf_id = '$jfId' and
 				deleted_at='0000-00-00 00:00:00'");
 		DB::commit();
-		return json_encode($raw);
+		$saleDataResult = $this->getDocumentData($saleData);
+		return $saleDataResult;
 	}
 	
 	/**
@@ -1979,13 +1827,12 @@ class BillModel extends Model
 			$billExpenseResult = array();
 			//get latest expense sale data from database
 			DB::beginTransaction();
-			$billExpenseResult = $this->database->select("select 
+			$billExpenseResult = DB::connection($databaseName)->select("select 
 			sale_expense_id as saleExpenseId,
 			expense_type as expenseType,
 			expense_id as expenseId,
 			expense_name as expenseName,
 			expense_value as expenseValue,
-			expense_tax as expenseTax,
 			expense_operation as expenseOperation,
 			sale_id as saleId
 			from sale_expense_dtl
@@ -1995,7 +1842,7 @@ class BillModel extends Model
 			$saleArrayData[$saleData]->expense = $billExpenseResult;
 			
 			DB::beginTransaction();
-			$documentResult[$saleData] = $this->database->select("select
+			$documentResult[$saleData] = DB::connection($databaseName)->select("select
 			document_id,
 			sale_id,
 			document_name,
@@ -2048,10 +1895,10 @@ class BillModel extends Model
 		
 		if(strcmp($arrayData->payment_mode,"bank")==0)
 		{
-			if(strcmp($paymentTransaction,"payment")==0 || strcmp($paymentTransaction,"receipt")==0)
+			if(strcmp($paymentTransaction,"payment")==0)
 			{
 				DB::beginTransaction();
-				$raw = $this->database->statement("update
+				$raw = DB::connection($databaseName)->statement("update
 				sales_bill set
 				payment_mode = '".$arrayData->payment_mode."',
 				advance = '".$arrayData->advance."',
@@ -2068,7 +1915,7 @@ class BillModel extends Model
 			else
 			{
 				DB::beginTransaction();
-				$raw = $this->database->statement("update
+				$raw = DB::connection($databaseName)->statement("update
 				sales_bill set
 				payment_mode = '".$arrayData->payment_mode."',
 				advance = '".$arrayData->advance."',
@@ -2087,10 +1934,10 @@ class BillModel extends Model
 		}
 		else
 		{
-			if(strcmp($paymentTransaction,"payment")==0 || strcmp($paymentTransaction,"receipt")==0)
+			if(strcmp($paymentTransaction,"payment")==0)
 			{
 				DB::beginTransaction();
-				$raw = $this->database->statement("update
+				$raw = DB::connection($databaseName)->statement("update
 				sales_bill set
 				payment_mode = '".$arrayData->payment_mode."',
 				advance = '".$arrayData->advance."',
@@ -2104,7 +1951,7 @@ class BillModel extends Model
 			else
 			{
 				DB::beginTransaction();
-				$raw = $this->database->statement("update
+				$raw = DB::connection($databaseName)->statement("update
 				sales_bill set
 				payment_mode = '".$arrayData->payment_mode."',
 				advance = '".$arrayData->advance."',
@@ -2123,8 +1970,9 @@ class BillModel extends Model
 		}
 		$saleIdData = $this->getSaleIdData($arrayData->sale_id);
 		$jsonDecodedSaleData = json_decode($saleIdData);
+		
 		DB::beginTransaction();
-		$saleTrnInsertionResult = $this->database->statement("insert
+		$saleTrnInsertionResult = DB::connection($databaseName)->statement("insert
 		into sales_bill_trn(
 		sale_id,
 		product_array,
@@ -2196,37 +2044,6 @@ class BillModel extends Model
 	}
 	
 	/**
-	 * update bill status data
-	 * @param  sale-id and bill-data array and image Array
-	 * returns the exception-message/status
-	*/
-	public function updateStatusData($statusData)
-	{
-		$mytime = Carbon\Carbon::now();
-		//database selection
-		$constantDatabase = new ConstantClass();
-		$databaseName = $constantDatabase->constantDatabase();
-		//get exception message
-		$exception = new ExceptionMessage();
-		$exceptionArray = $exception->messageArrays();
-		$statusId = $statusData['dispatch_status'];
-		$saleId = $statusData['sale_id'];
-		DB::beginTransaction();
-		$raw = $this->database->statement("update
-			sales_bill set
-			dispatch_status = '$statusId'
-			where sale_id = '$saleId'
-			");
-		DB::commit();
-		if ($raw==1) {
-			return $exceptionArray['200'];
-		}
-		else
-		{
-			return $exceptionArray['500'];
-		}
-	}
-	/**
 	 * update bill data
 	 * @param  sale-id and bill-data array and image Array
 	 * returns the exception-message/status
@@ -2243,122 +2060,106 @@ class BillModel extends Model
 		//get exception message
 		$exception = new ExceptionMessage();
 		$exceptionArray = $exception->messageArrays();
-		if(array_key_exists('operation',$headerData))
-		{
-			if ($headerData['operation'][0]== 'generate') {
-				$this->updatePrintCount($saleId);
-			}
-		}
 		$salesOrder = array_key_exists("issalesorderupdate",$headerData) ? "is_salesorder='ok'":"is_salesorder='not'";
 		$salesOrderInsert = array_key_exists("issalesorderupdate",$headerData) ? "ok":"not";
 		if(isset($documentArray) && !empty($documentArray))
 		{
-			DB::beginTransaction();
-			$saleBillData = $this->database->select("SELECT 
+			for($docArray=0;$docArray<count($documentArray);$docArray++)
+			{
+				DB::beginTransaction();
+				$documentResult = DB::connection($databaseName)->statement("insert into sales_bill_doc_dtl(
+				sale_id,
+				document_name,
+				document_size,
+				document_format,
+				created_at) 
+				values('".$saleId."','".$documentArray[$docArray][0]."','".$documentArray[$docArray][1]."','".$documentArray[$docArray][2]."','".$mytime."')");
+				DB::commit();
+				
+				//get client-id from sale-bill
+				DB::beginTransaction();
+				$saleBillData = DB::connection($databaseName)->select("SELECT 
 				sale_id,
 				client_id
-				FROM sales_bill where sale_id= ? and deleted_at='0000-00-00 00:00:00' and is_draft='no' and ".$salesOrder, [$saleId]);
-			DB::commit();
-
-			$documentCount = count($documentArray);
-			//document insertion
-
-			$saleDocArray = call_user_func_array('array_merge', array_map(function($br) use($saleId, $mytime) {
-					$ar = array($saleId, $br[0], $br[1], $br[2], $mytime);
-					return $ar;
-				}, $documentArray));
-
-			$clientId = $saleBillData[0]->client_id;
-
-			$clientDocArray = call_user_func_array('array_merge', array_map(function($br) use($saleId, $mytime, $clientId) {
-					$ar = array($saleId, $br[0], $br[1], $br[2], $clientId, $mytime);
-					return $ar;
-				}, $documentArray));
-
-			$saleDocStr = "(?, ?, ?, ?, ?)";
-			$saleDocStr .= str_repeat(", (?, ?, ?, ?, ?)", $documentCount - 1);
-
-			$clientDocStr = "(?, ?, ?, ?, ?, ?)";
-			$clientDocStr .= str_repeat(", (?, ?, ?, ?, ?, ?)", $documentCount - 1);
-
-			DB::beginTransaction();
-			$documentResult = $this->database->statement("INSERT INTO sales_bill_doc_dtl(sale_id, document_name, document_size, document_format, created_at)
-			VALUES {$saleDocStr};", $saleDocArray);
-
-			$clientDocumentInsertion = $this->database->statement("INSERT INTO client_doc_dtl(sale_id, document_name, document_size, document_format, client_id, created_at)
-			VALUES {$clientDocStr};", $clientDocArray);
-			if($documentResult==0)
-			{
-				DB::rollback();
-				return $exceptionArray['500'];
-			}
-			DB::commit();	
+				FROM sales_bill where sale_id='".$saleId."' and deleted_at='0000-00-00 00:00:00' and is_draft='no' and ".$salesOrder);
+				DB::commit();
+				
+				//insert document data into client-document table
+				DB::beginTransaction();
+				$clientDocumentInsertion = DB::connection($databaseName)->statement("insert into client_doc_dtl(
+				sale_id,
+				document_name,
+				document_format,
+				document_size,
+				client_id,
+				created_at)
+				values('".$saleId."','".$documentArray[$docArray][0]."','".$documentArray[$docArray][2]."','".$documentArray[$docArray][1]."','".$saleBillData[0]->client_id."','".$mytime."')");
+				DB::commit();
+				if($documentResult==0)
+				{
+					return $exceptionArray['500'];
+				}
+			}	
 		}
 		if(array_key_exists('expense',$billArray))
 		{
 			$decodedExpenseData = json_decode($billArray['expense']);
 			$expenseCount = count($decodedExpenseData);
 			
-			$expenseValueArray = call_user_func_array('array_merge', array_map(function($br) use($saleId, $mytime) {
-					$ar = array($br->expenseType, $br->expenseName, $br->expenseValue, $br->expenseTax, $br->expenseOperation, $saleId, $br->expenseId, $mytime);
-					return $ar;
-				}, $decodedExpenseData));
-
-			$expenseStr = "(?, ?, ?, ?, ?, ?, ?, ?)";
-			$expenseStr .= str_repeat(", (?, ?, ?, ?, ?, ?, ?, ?)", $expenseCount - 1);
-
 			//delete expense data
 			DB::beginTransaction();
-			$deleteExpenseData = $this->database->statement("update
+			$deleteExpenseData = DB::connection($databaseName)->statement("update
 			sale_expense_dtl set
 			deleted_at = '".$mytime."'
 			where sale_id = ".$saleId);
-			if($expenseCount) {
-				$raw = $this->database->statement("INSERT INTO
+			DB::commit();
+			
+			for($expenseArray=0;$expenseArray<$expenseCount;$expenseArray++)
+			{
+				//insert expense data for update expense data
+				DB::beginTransaction();
+				$raw = DB::connection($databaseName)->statement("insert into
 				sale_expense_dtl(
 				expense_type,
 				expense_name,
 				expense_value,
-				expense_tax,
 				expense_operation,
 				sale_id,
 				expense_id,
 				created_at)
-				VALUES {$expenseStr} ;", $expenseValueArray);
+				values('".$decodedExpenseData[$expenseArray]->expenseType."',
+				'".$decodedExpenseData[$expenseArray]->expenseName."',
+				'".$decodedExpenseData[$expenseArray]->expenseValue."',
+				'".$decodedExpenseData[$expenseArray]->expenseOperation."',
+				'".$saleId."',
+				'".$decodedExpenseData[$expenseArray]->expenseId."',
+				'".$mytime."')");
+				DB::commit();
 			}
-			
-			DB::commit();
 			//remode expense from an array
 			unset($billArray['expense']);
 		}
-		$valueArray = array();
-		foreach ($billArray as $billArrayData => $value) {
-			$keyValueString .= $billArrayData."= ? ,";
-			array_push($valueArray, $value);
+		for($billArrayData=0;$billArrayData<count($billArray);$billArrayData++)
+		{
+			$keyValueString = $keyValueString.array_keys($billArray)[$billArrayData]." = '".$billArray[array_keys($billArray)[$billArrayData]]."',";
 		}
-
+		
 		// update bill-data
-		DB::beginTransaction();
-		$raw = $this->database->statement("update
-		sales_bill set
-		".$keyValueString."
-		updated_at = '".$mytime."'
-		where sale_id = ".$saleId." and
-		".$salesOrder." and
-		deleted_at='0000-00-00 00:00:00'", $valueArray);
-		DB::commit();
-		if(array_key_exists('product_array', $billArray)) {
-			$billArray['product_array'];
-			$invModel = new SaleInventoryModel();
-			$invModel->deleteData(['sale_id' => $saleId]);
-			$transformer = new SaleInventoryTransformer();
-			$trimInv = $transformer->trimInventory($billArray['product_array'], $saleId);
-			$invStatus = $invModel->insertData($trimInv);
-			if(strcmp($invStatus, $exceptionArray['200'])!=0) {
-				return $invStatus;
-			}
-		}
-
+		// try{
+			DB::beginTransaction();
+			$raw = DB::connection($databaseName)->statement("update
+			sales_bill set
+			".$keyValueString."
+			updated_at = '".$mytime."',
+			".$salesOrder."
+			where sale_id = ".$saleId." and
+			deleted_at='0000-00-00 00:00:00'");
+			DB::commit();
+		// }
+		// catch(\Illuminate\Database\QueryException $ex){ 
+		//   dd($ex->getMessage()); 
+		// }
+		
 		if($raw==1)
 		{
 			$saleData = $this->getSaleIdData($saleId);
@@ -2366,7 +2167,7 @@ class BillModel extends Model
 
 			//insert bill data in bill_trn 
 			DB::beginTransaction();
-			$saleTrnInsertionResult = $this->database->statement("insert
+			$saleTrnInsertionResult = DB::connection($databaseName)->statement("insert
 			into sales_bill_trn(
 			sale_id,
 			product_array,
@@ -2465,7 +2266,7 @@ class BillModel extends Model
 		$salesOrderInsert = array_key_exists("issalesorderupdate",$headerData) ? "ok" : "not";
 		// update bill-date
 		DB::beginTransaction();
-		$raw = $this->database->statement("update
+		$raw = DB::connection($databaseName)->statement("update
 		sales_bill set
 		entry_date = '".$entryDate."',
 		updated_at = '".$mytime."'
@@ -2481,7 +2282,7 @@ class BillModel extends Model
 			
 			//insert bill data in bill_trn 
 			DB::beginTransaction();
-			$saleTrnInsertionResult = $this->database->statement("insert
+			$saleTrnInsertionResult = DB::connection($databaseName)->statement("insert
 			into sales_bill_trn(
 			sale_id,
 			product_array,
@@ -2582,7 +2383,7 @@ class BillModel extends Model
 			for($docArray=0;$docArray<count($documentArray);$docArray++)
 			{
 				DB::beginTransaction();
-				$documentResult = $this->database->statement("insert into sales_bill_doc_dtl(
+				$documentResult = DB::connection($databaseName)->statement("insert into sales_bill_doc_dtl(
 				sale_id,
 				document_name,
 				document_size,
@@ -2593,7 +2394,7 @@ class BillModel extends Model
 				
 				//get client-id from sale-bill
 				DB::beginTransaction();
-				$saleBillData = $this->database->select("SELECT 
+				$saleBillData = DB::connection($databaseName)->select("SELECT 
 				sale_id,
 				client_id
 				FROM sales_bill 
@@ -2604,7 +2405,7 @@ class BillModel extends Model
 				
 				//insert document data into client-document table
 				DB::beginTransaction();
-				$clientDocumentInsertion = $this->database->statement("insert into client_doc_dtl(
+				$clientDocumentInsertion = DB::connection($databaseName)->statement("insert into client_doc_dtl(
 				sale_id,
 				document_name,
 				document_format,
@@ -2643,7 +2444,7 @@ class BillModel extends Model
 		$exceptionArray = $exception->messageArrays();
 		
 		DB::beginTransaction();
-		$raw = $this->database->select("select
+		$raw = DB::connection($databaseName)->select("select
 		sale_trn_id,
 		sale_id,
 		product_array,
@@ -2711,7 +2512,7 @@ class BillModel extends Model
 		$databaseName = $constantDatabase->constantDatabase();
 		
 		DB::beginTransaction();
-		$billData = $this->database->select("select 
+		$billData = DB::connection($databaseName)->select("select 
 		sale_id,
 		product_array,
 		payment_mode,
@@ -2742,7 +2543,6 @@ class BillModel extends Model
 		company_id,
 		branch_id,
 		jf_id,
-		print_count,
 		created_at,
 		updated_at 
 		from sales_bill 
@@ -2777,7 +2577,7 @@ class BillModel extends Model
 		$databaseName = $constantDatabase->constantDatabase();
 		
 		DB::beginTransaction();
-		$billData = $this->database->select("select 
+		$billData = DB::connection($databaseName)->select("select 
 		sale_id,
 		product_array,
 		payment_mode,
@@ -2808,7 +2608,6 @@ class BillModel extends Model
 		company_id,
 		branch_id,
 		jf_id,
-		print_count,
 		created_at,
 		updated_at 
 		from sales_bill 
@@ -2842,7 +2641,7 @@ class BillModel extends Model
 		$databaseName = $constantDatabase->constantDatabase();
 	
 		DB::beginTransaction();
-		$billData = $this->database->select("select 
+		$billData = DB::connection($databaseName)->select("select 
 		sale_id,
 		product_array,
 		payment_mode,
@@ -2873,7 +2672,6 @@ class BillModel extends Model
 		company_id,
 		branch_id,
 		jf_id,
-		print_count,
 		created_at,
 		updated_at 
 		from sales_bill 
@@ -2908,7 +2706,7 @@ class BillModel extends Model
 		$databaseName = $constantDatabase->constantDatabase();
 		
 		DB::beginTransaction();
-		$billData = $this->database->select("select 
+		$billData = DB::connection($databaseName)->select("select 
 		sale_id,
 		product_array,
 		payment_mode,
@@ -2939,7 +2737,6 @@ class BillModel extends Model
 		company_id,
 		branch_id,
 		jf_id,
-		print_count,
 		created_at,
 		updated_at 
 		from sales_bill 
@@ -2976,7 +2773,7 @@ class BillModel extends Model
 		$exceptionArray = $exception->messageArrays();
 		//get setting-data and check the settings is enable/disable
 		$settingModel = new SettingModel();
-		$settingData = $settingModel->getParticularTypeData("chequeno");
+		$settingData = $settingModel->getAllData();
 		$decodedSettingData = json_decode($settingData);
 		if(strcmp($settingData,$exceptionArray['204'])==0)
 		{
@@ -2985,7 +2782,7 @@ class BillModel extends Model
 		else
 		{
 			//check cheque-no is enable/disable
-			foreach ($decodedSettingData as $key => $value)
+			foreach ($decodedSettingData as $key => $value) 
 			{
 				if(strcmp($decodedSettingData[$key]->setting_type,"chequeno")==0)
 				{
@@ -3010,7 +2807,7 @@ class BillModel extends Model
 			}
 			//check cheque-no
 			DB::beginTransaction();
-			$chequeNoResult = $this->database->select("select 
+			$chequeNoResult = DB::connection($databaseName)->select("select 
 			sale_id
 			from sales_bill
 			where check_number='".$chequeNo."' and ".$billString."
@@ -3032,7 +2829,7 @@ class BillModel extends Model
 	 * @param  sale-id
 	 * returns the exception-message/status
 	*/
-	public function deleteBillData($saleId,$deletedBy = 0)
+	public function deleteBillData($saleId)
 	{
 		//database selection
 		$database = "";
@@ -3045,7 +2842,43 @@ class BillModel extends Model
 		
 		$saleIdData = $this->getSaleIdData($saleId);
 		$jsonDecodedSaleData = json_decode($saleIdData);
-		
+		// $productArray = $jsonDecodedSaleData[0]->product_array;
+		// $inventoryCount = count(json_decode($productArray)->inventory);
+		// for($productArrayData=0;$productArrayData<$inventoryCount;$productArrayData++)
+		// {
+		// 	$inventoryData = json_decode($productArray)->inventory;
+		// 	DB::beginTransaction();
+		// 	$getTransactionSummaryData[$productArrayData] = DB::connection($databaseName)->select("select 
+		// 	product_trn_summary_id,
+		// 	qty
+		// 	from product_trn_summary
+		// 	where product_id='".$inventoryData[$productArrayData]->productId."' and
+		// 	deleted_at='0000-00-00 00:00:00'");
+		// 	DB::commit();
+		// 	if(count($getTransactionSummaryData[$productArrayData])==0)
+		// 	{
+		// 		//insert data
+		// 		// DB::beginTransaction();
+		// 		// $insertionResult[$productArrayData] = DB::connection($databaseName)->statement("insert into 
+		// 		// product_trn_summary(qty,company_id,branch_id,product_id)
+		// 		// values('".$inventoryData[$productArrayData]->qty."',
+		// 		// 	   '".$jsonDecodedSaleData[0]->company_id."',
+		// 		// 	   0,
+		// 		// 	   '".$inventoryData[$productArrayData]->productId."')");
+		// 		// DB::commit();
+		// 	}
+		// 	else
+		// 	{
+		// 		$qty = $getTransactionSummaryData[$productArrayData][0]->qty+$inventoryData[$productArrayData]->qty;
+		// 		//update data
+		// 		DB::beginTransaction();
+		// 		$updateResult = DB::connection($databaseName)->statement("update 
+		// 		product_trn_summary set qty='".$qty."'
+		// 		where product_trn_summary_id='".$getTransactionSummaryData[$productArrayData][0]->product_trn_summary_id."' and
+		// 		deleted_at='0000-00-00 00:00:00'");
+		// 		DB::commit();
+		// 	}
+		// }
 		if(strcmp($saleIdData,$exceptionArray['404'])==0)
 		{
 			return $exceptionArray['404'];
@@ -3061,7 +2894,7 @@ class BillModel extends Model
 			{
 				//delete ledgerId_ledger_dtl data as per given ledgerId and jf_id
 				DB::beginTransaction();
-				$deleteLedgerData = $this->database->statement("update
+				$deleteLedgerData = DB::connection($databaseName)->statement("update
 				".$value->ledger_id."_ledger_dtl set
 				deleted_at = '".$mytime."'
 				where jf_id = ".$jsonDecodedSaleData[0]->jf_id." and
@@ -3071,7 +2904,7 @@ class BillModel extends Model
 		}
 		//delete journal data
 		DB::beginTransaction();
-		$deleteJournalData = $this->database->statement("update
+		$deleteJournalData = DB::connection($databaseName)->statement("update
 		journal_dtl set
 		deleted_at = '".$mytime."'
 		where jf_id = ".$jsonDecodedSaleData[0]->jf_id." and
@@ -3080,7 +2913,7 @@ class BillModel extends Model
 			
 		//delete product_trn data
 		DB::beginTransaction();
-		$deleteProductTrnData = $this->database->statement("update
+		$deleteProductTrnData = DB::connection($databaseName)->statement("update
 		product_trn set
 		deleted_at = '".$mytime."'
 		where jf_id = ".$jsonDecodedSaleData[0]->jf_id." and
@@ -3089,21 +2922,16 @@ class BillModel extends Model
 		
 		//delete bill data 
 		DB::beginTransaction();
-		$deleteBillData = $this->database->statement("update
+		$deleteBillData = DB::connection($databaseName)->statement("update
 		sales_bill set
-		deleted_at = '".$mytime."',
-		deleted_by = '".$deletedBy."'
+		deleted_at = '".$mytime."'
 		where sale_id = ".$saleId." and
 		deleted_at='0000-00-00 00:00:00'");
-
-		$deleteBillData = $this->database->statement("UPDATE
-		sale_inventory_dtl SET
-		deleted_at = ? WHERE sale_id = ? AND deleted_at='0000-00-00 00:00:00'", [$mytime, $saleId]);
 		DB::commit();
 
 		//delete bill expense data 
 		DB::beginTransaction();
-		$deleteBillExpenseData = $this->database->statement("update
+		$deleteBillExpenseData = DB::connection($databaseName)->statement("update
 		sale_expense_dtl set
 		deleted_at = '".$mytime."'
 		where sale_id = ".$saleId." and
@@ -3112,7 +2940,7 @@ class BillModel extends Model
 		
 		//delete bill-transaction data 
 		DB::beginTransaction();
-		$deleteBillTrnData = $this->database->statement("update
+		$deleteBillTrnData = DB::connection($databaseName)->statement("update
 		sales_bill_trn set
 		deleted_at = '".$mytime."'
 		where sale_id = ".$saleId." and
@@ -3131,25 +2959,6 @@ class BillModel extends Model
 	}
 	
 	/**
-	 * update print_count data
-	 * @param  sale-id
-	 * returns the exception-message/status
-	*/
-	function updatePrintCount($saleId)
-	{
-		$database = "";
-		$constantDatabase = new ConstantClass();
-		$databaseName = $constantDatabase->constantDatabase();
-		//get exception message
-		DB::beginTransaction();
-		$deleteBillData = $this->database->statement("update
-		sales_bill set
-		print_count = print_count + 1
-		where sale_id = ".$saleId." and
-		deleted_at='0000-00-00 00:00:00'");
-		DB::commit();
-	}
-	/**
 	 * delete bill-draft data
 	 * @param  sale-id
 	 * returns the exception-message/status
@@ -3167,7 +2976,7 @@ class BillModel extends Model
 		
 		//delete bill data 
 		DB::beginTransaction();
-		$deleteBillData = $this->database->statement("update
+		$deleteBillData = DB::connection($databaseName)->statement("update
 		sales_bill set
 		deleted_at = '".$mytime."'
 		where sale_id = ".$saleId." and
@@ -3176,7 +2985,7 @@ class BillModel extends Model
 
 		//delete bill expense data 
 		DB::beginTransaction();
-		$deleteBillExpenseData = $this->database->statement("update
+		$deleteBillExpenseData = DB::connection($databaseName)->statement("update
 		sale_expense_dtl set
 		deleted_at = '".$mytime."'
 		where sale_id = ".$saleId." and
@@ -3210,16 +3019,15 @@ class BillModel extends Model
 		$exceptionArray = $exception->messageArrays();
 		//delete bill data 
 		DB::beginTransaction();
-		$deleteBillData = $this->database->statement("update
+		$deleteBillData = DB::connection($databaseName)->statement("update
 		sales_bill set
 		deleted_at = '".$mytime."'
 		where sale_id = ".$saleId." and
 		deleted_at='0000-00-00 00:00:00'");
-		$deleteBillData = $this->database->statement("UPDATE
-		sale_inventory_dtl SET
-		deleted_at = ? WHERE sale_id = ? AND deleted_at='0000-00-00 00:00:00'", [$mytime, $saleId]);
-
-		$deleteBillExpenseData = $this->database->statement("update
+		DB::commit();
+		//delete bill expense data 
+		DB::beginTransaction();
+		$deleteBillExpenseData = DB::connection($databaseName)->statement("update
 		sale_expense_dtl set
 		deleted_at = '".$mytime."'
 		where sale_id = ".$saleId." and

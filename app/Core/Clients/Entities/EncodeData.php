@@ -44,8 +44,6 @@ class EncodeData extends StateService
 		$isDisplay= $decodedJson[0]['is_display'];
 		$stateAbb= $decodedJson[0]['state_abb'];
 		$cityId= $decodedJson[0]['city_id'];
-		$closingBalance = array_key_exists('closing_balance', $decodedJson[0]) ? $decodedJson[0]['closing_balance'] : [];
-			
 		// get the state details from database
 		$encodeStateDataClass = new EncodeData();
 		$stateStatus = $encodeStateDataClass->getStateData($stateAbb);
@@ -181,7 +179,6 @@ class EncodeData extends StateService
 				);
 			}
 		}
-		$data['closingBalance'] = $closingBalance;
 		$encodeData = json_encode($data);
 		return $encodeData;
 	}

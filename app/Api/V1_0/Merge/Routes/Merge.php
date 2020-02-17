@@ -18,10 +18,6 @@ class Merge implements RouteRegistrarInterface
     public function register(RegistrarInterface $Registrar)
     {
 		Route::post('Merge/Merge/products/{productId}', 'Merge\Controllers\MergeController@mergeProducts');
-
-		Route::get('Merge/Merge/ledgers/{companyId}','Merge\Controllers\MergeController@mergeLedgers');
-
-		Route::get('Merge/Merge/inventory/{inventoryType}','Merge\Controllers\MergeController@fixInventory');
 		// get jf_id
 		
 	}

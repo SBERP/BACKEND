@@ -14,10 +14,6 @@ use ERP\Http\Requests;
 use Illuminate\Http\Response;
 use Illuminate\Http\Request;
 use stdClass;
-
-// Inventory Fix deps
-use ERP\Api\V1_0\Accounting\PurchaseBills\Transformers\PurchaseInventoryTransformer;
-use ERP\Model\Accounting\PurchaseBills\PurchaseInventoryModel;
 /**
  * @author Reema Patel<reema.p@siliconbrain.in>
  */
@@ -25,16 +21,6 @@ class PurchaseBillModel extends Model
 {
 	protected $table = 'purchase_bill';
 	
-	function __construct()
-	{
-		parent::__construct();
-		$exceptions = new ExceptionMessage();
-		$this->messages = $exceptions->messageArrays();
-		$this->constant = new ConstantClass();
-		$this->constantVars = $this->constant->constantVariable();
-		$database = $this->constant->constantDatabase();
-		$this->database = DB::connection($database);
-	}
 	/**
 	 * insert data with document
 	 * @param  array
@@ -44,8 +30,14 @@ class PurchaseBillModel extends Model
 	{
 		$mytime = Carbon\Carbon::now();
 		// $requestInput = $requestData->input();
+
+		//database selection
+		$database = "";
+		$constantDatabase = new ConstantClass();
+		$databaseName = $constantDatabase->constantDatabase();
 		//get exception message
-		$exceptionArray = $this->messages;
+		$exception = new ExceptionMessage();
+		$exceptionArray = $exception->messageArrays();
 		
 		$isPurchaseOrderInsert = array_key_exists("ispurchaseorder",$requestData->header())?"ok":"not";
 		$purchaseData="";
@@ -53,83 +45,87 @@ class PurchaseBillModel extends Model
 		$purchaseExpenseData="";
 		$purchaseExpenseKey="";
 		$decodedJsonExpense = array();
-
-		$expenseKey = array_search('expense', $keyName);
-		if($expenseKey >= 0 && in_array('expense', $keyName)) {
-			$decodedJsonExpense = json_decode($getData[$expenseKey]);
-			array_splice($keyName, $expenseKey, 1);
-			array_splice($getData, $expenseKey, 1);
-		}
-		array_push($keyName, 'is_purchaseorder', 'created_at');
-		array_push($getData, $isPurchaseOrderInsert, $mytime);
-		$keyData = implode(',', $keyName);
-		$purchaseData = "?";
-		$purchaseData .= str_repeat(', ?', count($keyName) - 1);
-		//purchase-data save
-		DB::beginTransaction();
-
-		$purchaseBillResult = $this->database->statement("INSERT INTO purchase_bill({$keyData}) 
-		VALUES({$purchaseData});", $getData);
-
-		$purchaseIdResult = $this->database->select("SELECT
-		max(purchase_id) purchase_id
-		FROM purchase_bill WHERE deleted_at='0000-00-00 00:00:00' AND is_purchaseorder = ?;", [$isPurchaseOrderInsert]);
-
-		DB::commit();
-
-		$productArrayKey = array_search('product_array', $keyName);
-		if($productArrayKey >= 0 && in_array('product_array', $keyName)) {
-			$transformer = new PurchaseInventoryTransformer();
-			$trimInv = $transformer->trimInventory($getData[$productArrayKey], $purchaseIdResult[0]->purchase_id);
-
-			$invModel = new PurchaseInventoryModel();
-			$invStatus = $invModel->insertData($trimInv);
-			if(strcmp($invStatus, $exceptionArray['200'])!=0) {
-				return $invStatus;
+		for($data=0;$data<count($getData);$data++)
+		{
+			if(strcmp($keyName[$data],'expense')==0)
+			{
+				$decodedJsonExpense = json_decode($getData[$data]);
+			}
+			else
+			{
+				if($data == (count($getData)-1))
+				{
+					$purchaseData = $purchaseData."'".$getData[$data]."'";
+					$keyData =$keyData.$keyName[$data];
+				}
+				else
+				{
+					$purchaseData = $purchaseData."'".$getData[$data]."',";
+					$keyData =$keyData.$keyName[$data].",";
+				}
 			}
 		}
-		$purchaseId = $purchaseIdResult[0]->purchase_id;
+		//purchase-data save
+		DB::beginTransaction();
+		$purchaseBillResult = DB::connection($databaseName)->statement("insert into purchase_bill(".$keyData.",is_purchaseorder,created_at) 
+		values(".$purchaseData.",'".$isPurchaseOrderInsert."','".$mytime."')");
+		DB::commit();
+
+		//get latest purchase-id from database
+		DB::beginTransaction();
+		$purchaseIdResult = DB::connection($databaseName)->select("SELECT 
+		max(purchase_id) purchase_id
+		FROM purchase_bill where deleted_at='0000-00-00 00:00:00' and is_purchaseorder = '".$isPurchaseOrderInsert."'");
+		DB::commit();
+
 		if(count($decodedJsonExpense)!=0)
 		{
 			$expenseCount = count($decodedJsonExpense);
-			$valueArray = call_user_func_array('array_merge', array_map(function($br) use($purchaseId, $mytime) {
-						$ar = array($br->expenseName, $br->expenseType, $br->expenseValue, $br->expenseTax, $br->expenseOperation, $purchaseId, $br->expenseId, $mytime);
-						return $ar;
-					}, $decodedJsonExpense));
-			$valueStr = "(?, ?, ?, ?, ?, ?, ?, ?)";
-			$valueStr .= str_repeat(", (?, ?, ?, ?, ?, ?, ?, ?)", $expenseCount - 1);
-			DB::beginTransaction();
-			$this->database->statement("INSERT INTO purchase_expense_dtl(
-			expense_name,
-			expense_type,
-			expense_value,
-			expense_tax,
-			expense_operation,
-			purchase_id,
-			expense_id,
-			created_at)
-			VALUES {$valueStr};", $valueArray);
-			DB::commit();
+			for($expenseData=0;$expenseData<$expenseCount;$expenseData++)
+			{
+				//insertion in purchase_expense_dtl
+				DB::beginTransaction();
+				$raw = DB::connection($databaseName)->statement("insert into purchase_expense_dtl(
+				expense_name,
+				expense_type,
+				expense_value,
+				expense_operation,
+				purchase_id,
+				expense_id,
+				created_at)
+				values(
+				'".$decodedJsonExpense[$expenseData]->expenseName."',
+				'".$decodedJsonExpense[$expenseData]->expenseType."',
+				'".$decodedJsonExpense[$expenseData]->expenseValue."',
+				'".$decodedJsonExpense[$expenseData]->expenseOperation."',
+				'".$purchaseIdResult[0]->purchase_id."',
+				'".$decodedJsonExpense[$expenseData]->expenseId."',
+				'".$mytime."')");
+				DB::commit();
+			}
 		}
+		
 		if(count($documentArray)!=0)
 		{
 			$documentCount = count($documentArray);
 			//document insertion
-			$valueArray = call_user_func_array('array_merge', array_map(function($br) use($purchaseId, $mytime) {
-					$ar = array($br['document_name'], $br['document_size'], $br['document_format'], $purchaseId, $mytime);
-					return $ar;
-				}, $documentArray));
-			$valueStr = "(?, ?, ?, ?, ?)";
-			$valueStr .= str_repeat(", (?, ?, ?, ?, ?)", $documentCount - 1);
-			DB::beginTransaction();
-			$this->database->statement("INSERT INTO purchase_doc_dtl(
-			document_name,
-			document_size,
-			document_format,
-			purchase_id,
-			created_at)
-			VALUES {$valueStr};", $valueArray);
-			DB::commit();
+			for($documentData=0;$documentData<$documentCount;$documentData++)
+			{
+				DB::beginTransaction();
+				$purchaseBillResult = DB::connection($databaseName)->statement("insert into purchase_doc_dtl
+				(document_name,
+				document_size,
+				document_format,
+				purchase_id,
+				created_at) 
+				values(
+				'".$documentArray[$documentData]['document_name']."',
+				".$documentArray[$documentData]['document_size'].",
+				'".$documentArray[$documentData]['document_format']."',
+				".$purchaseIdResult[0]->purchase_id.",
+				'".$mytime."')");
+				DB::commit();
+			}
 		}
 		if($purchaseBillResult==1)
 		{
@@ -159,76 +155,76 @@ class PurchaseBillModel extends Model
 		$mytime = Carbon\Carbon::now();
 		$keyValueString="";
 		$decodedExpenseData = array();
-		$expenseKey = array_search('expense', $keyName);
-		if($expenseKey >= 0 && in_array('expense', $keyName)) {
-			$decodedExpenseData = json_decode($getData[$expenseKey]);
-			array_splice($keyName, $expenseKey, 1);
-			array_splice($getData, $expenseKey, 1);
+		for($data=0;$data<count($getData);$data++)
+		{
+			if(strcmp($keyName[$data],'expense')==0)
+			{
+				$decodedExpenseData = json_decode($getData[$data]);
+			}
+			else
+			{
+				$keyValueString=$keyValueString.$keyName[$data]."='".$getData[$data]."',";
+			}
+			
 		}
-		array_push($keyName, 'updated_at');
-		array_push($getData, $mytime);
-		$keyValueString = implode('= ?, ', $keyName);
-		$keyValueString .= '= ?';
-		array_push($getData, $purchaseId);
 		DB::beginTransaction();
-		$purchaseBillResult = $this->database->statement("UPDATE purchase_bill
-		SET {$keyValueString} WHERE purchase_id= ? ;", $getData);
-		$deleteExpenseData = $this->database->statement("UPDATE purchase_expense_dtl SET deleted_at = ? WHERE purchase_id = ?;", [$mytime, $purchaseId]);
+		$purchaseBillResult = DB::connection($databaseName)->statement("update purchase_bill
+		set ".$keyValueString."updated_at='".$mytime."' where purchase_id='".$purchaseId."'");
 		DB::commit();
-
-		$productArrayKey = array_search('product_array', $keyName);
-		if($productArrayKey >= 0  && in_array('product_array', $keyName)) {
-			$transformer = new PurchaseInventoryTransformer();
-			$trimInv = $transformer->trimInventory($getData[$productArrayKey], $purchaseId);
-
-			$invModel = new PurchaseInventoryModel();
-			$invModel->deleteData(['purchase_id' => $purchaseId]);
-			$invStatus = $invModel->insertData($trimInv);
-			if(strcmp($invStatus, $exceptionArray['200'])!=0) {
-				return $invStatus;
+		//delete expense data
+		DB::beginTransaction();
+		$deleteExpenseData = DB::connection($databaseName)->statement("update
+		purchase_expense_dtl set
+		deleted_at = '".$mytime."'
+		where purchase_id = ".$purchaseId);
+		DB::commit();
+		$expenseCount = count($decodedExpenseData);
+		if($expenseCount!=0)
+		{
+			for($expenseData=0;$expenseData<$expenseCount;$expenseData++)
+			{
+				//insert expense data for update expense data
+				DB::beginTransaction();
+				$insertExpenseData = DB::connection($databaseName)->statement("insert into
+				purchase_expense_dtl(
+				expense_type,
+				expense_name,
+				expense_value,
+				expense_operation,
+				purchase_id,
+				expense_id,
+				created_at)
+				values('".$decodedExpenseData[$expenseData]->expenseType."',
+				'".$decodedExpenseData[$expenseData]->expenseName."',
+				'".$decodedExpenseData[$expenseData]->expenseValue."',
+				'".$decodedExpenseData[$expenseData]->expenseOperation."',
+				'".$purchaseId."',
+				'".$decodedExpenseData[$expenseData]->expenseId."',
+				'".$mytime."')");
+				DB::commit();
 			}
 		}
-
-		$expenseCount = count($decodedExpenseData);
-		if($expenseCount!=0) {
-			$valueArray = call_user_func_array('array_merge', array_map(function($br) use($purchaseId, $mytime) {
-						$ar = array($br->expenseName, $br->expenseType, $br->expenseValue, $br->expenseTax, $br->expenseOperation, $purchaseId, $br->expenseId, $mytime);
-						return $ar;
-					}, $decodedExpenseData));
-			$valueStr = "(?, ?, ?, ?, ?, ?, ?, ?)";
-			$valueStr .= str_repeat(", (?, ?, ?, ?, ?, ?, ?, ?)", $expenseCount - 1);
-			DB::beginTransaction();
-			$insertExpenseData = $this->database->statement("INSERT INTO purchase_expense_dtl(
-			expense_name,
-			expense_type,
-			expense_value,
-			expense_tax,
-			expense_operation,
-			purchase_id,
-			expense_id,
-			created_at)
-			VALUES {$valueStr};", $valueArray);
-			DB::commit();
-		}
 	    $documentCount = count($documentArray);
-		if($documentCount!=0) {
+		if($documentCount!=0)
+		{
 			//document insertion
-			$valueArray = call_user_func_array('array_merge', array_map(function($br) use($purchaseId, $mytime) {
-					$ar = array($br['document_name'], $br['document_size'], $br['document_format'], $purchaseId, $mytime);
-					return $ar;
-				}, $documentArray));
-			$valueStr = "(?, ?, ?, ?, ?)";
-			$valueStr .= str_repeat(", (?, ?, ?, ?, ?)", $documentCount - 1);
-			DB::beginTransaction();
-			$this->database->statement("INSERT INTO purchase_doc_dtl(
-			document_name,
-			document_size,
-			document_format,
-			purchase_id,
-			created_at)
-			VALUES {$valueStr};", $valueArray);
-			DB::commit();
-
+			for($documentData=0;$documentData<$documentCount;$documentData++)
+			{
+				DB::beginTransaction();
+				$purchaseBillResultDoc = DB::connection($databaseName)->statement("insert into purchase_doc_dtl
+				(document_name,
+				document_size,
+				document_format,
+				purchase_id,
+				created_at) 
+				values(
+				'".$documentArray[$documentData]['document_name']."',
+				".$documentArray[$documentData]['document_size'].",
+				'".$documentArray[$documentData]['document_format']."',
+				".$purchaseId.",
+				'".$mytime."')");
+				DB::commit();
+			}
 		}
 		if($purchaseBillResult==1)
 		{
@@ -255,347 +251,463 @@ class PurchaseBillModel extends Model
 		// get exception message
 		$exception = new ExceptionMessage();
 		$exceptionArray = $exception->messageArrays();
-		
-		$isPurchaseOrder = array_key_exists('ispurchaseorder',$headerData) ? "p.is_purchaseorder='ok'" : "p.is_purchaseorder='not'";
-		$orderBy = '';
-		$extraQuery = '';
 		if(array_key_exists('previouspurchaseid',$headerData))
 		{
-			$extraQuery = $headerData['previouspurchaseid'][0]==0 ? '' : ' and p.purchase_id < '.$headerData['previouspurchaseid'][0];
-			$orderBy = ' order by p.purchase_id desc limit 1';
+			$previousPurchaseId = $this->getPreviousPurchaseId($headerData);
+			return $previousPurchaseId;
 		}
-		elseif(array_key_exists('nextpurchaseid',$headerData))
+		else if(array_key_exists('nextpurchaseid',$headerData))
 		{
-			$extraQuery = $headerData['nextpurchaseid'][0]==0 ? '' : ' and p.purchase_id > '.$headerData['nextpurchaseid'][0];
-			$orderBy = ' order by p.purchase_id asc limit 1';
+			$nextPurchaseIdData = $this->getNextPurchaseId($headerData);
+			return $nextPurchaseIdData;
 			
 		}
-		elseif (array_key_exists('operation',$headerData))
+		else if(array_key_exists('operation',$headerData))
 		{
+			$firstLastPurchaseData = $this->getFirstLastPurchaseBillData($headerData);
+			return $firstLastPurchaseData;
+		}
+		else if(array_key_exists('purchasebillid',$headerData))
+		{
+			$isPurchaseOrder = array_key_exists('ispurchaseorder',$headerData) ? "is_purchaseorder='ok'" : "is_purchaseorder='not'";
 
-			if(strcmp($headerData['operation'][0],'first')==0)
-			{
-				$orderBy = " order by purchase_id asc limit 1";
-			}
-			elseif (strcmp($headerData['operation'][0], 'last')==0) 
-			{
-				$orderBy = " order by purchase_id desc limit 1";
-			}
-			else
+			//get data as per given purchase-id
+			DB::beginTransaction();
+			$purchaseIdDataResult = DB::connection($databaseName)->select("select 
+			purchase_id,
+			vendor_id,
+			product_array,
+			bill_number,
+			total,
+			tax,
+			grand_total,
+			payment_mode,
+			bank_ledger_id,
+			bank_name,
+			check_number,
+			total_discounttype,
+			total_discount,
+			total_cgst_percentage,
+			total_sgst_percentage,
+			total_igst_percentage,
+			advance,
+			extra_charge,
+			balance,
+			transaction_type,
+			transaction_date,
+			entry_date,
+			bill_type,
+			remark,
+			company_id,
+			jf_id,
+			created_at,
+			updated_at 
+			from purchase_bill 
+			where bill_type='purchase_bill' and
+			".$isPurchaseOrder." and
+			purchase_id = '".$headerData['purchasebillid'][0]."' and
+			deleted_at='0000-00-00 00:00:00'");
+			DB::commit();
+			if(count($purchaseIdDataResult)==0)
 			{
 				return $exceptionArray['204'];
 			}
-
-		}
-		elseif(array_key_exists('purchasebillid',$headerData))
-		{
-			$extraQuery = " and p.purchase_id = '".$headerData['purchasebillid'][0]."'";
-
-		}
-		if(array_key_exists('companyid', $headerData)) {
-			$extraQuery .= " and p.company_id = '".$headerData['companyid'][0]."'";
-		}
-		//get all the purchase-bill data
-		DB::beginTransaction();
-		DB::statement('SET group_concat_max_len = 1000000');
-		$purchaseIdDataResult = $this->database->select("
-		select 
-		p.purchase_id,
-		p.vendor_id,
-		p.product_array,
-		p.bill_number,
-		p.total,
-		p.tax,
-		p.grand_total,
-		p.payment_mode,
-		p.bank_ledger_id,
-		p.bank_name,
-		p.check_number,
-		p.total_discounttype,
-		p.total_discount,
-		p.total_cgst_percentage,
-		p.total_sgst_percentage,
-		p.total_igst_percentage,
-		p.advance,
-		p.extra_charge,
-		p.balance,
-		p.transaction_type,
-		p.transaction_date,
-		p.entry_date,
-		p.due_date,
-		p.bill_type,
-		p.remark,
-		p.company_id,
-		p.jf_id,
-		p.created_at,
-		p.updated_at,
-		e.expense,
-		d.file
-		from purchase_bill as p
-		LEFT JOIN (
-			SELECT 
-				purchase_id, 
-				CONCAT( 
-					'[', 
-						GROUP_CONCAT( CONCAT( 
-							'{\"purchaseExpenseId\":', purchase_expense_id,
-							 	', \"expenseType\":\"', IFNULL(expense_type,''),
-							 	'\", \"expenseId\":', IFNULL(expense_id,0),
-							 	', \"expenseName\":\"', IFNULL(expense_name,''),
-							 	'\", \"expenseValue\":\"', IFNULL(expense_value,''),
-							 	'\", \"expenseTax\":\"', IFNULL(expense_tax,''),
-							 	'\", \"expenseOperation\":\"', IFNULL(expense_operation,''),
-							 	'\", \"purchaseId\":', IFNULL(purchase_id,0),
-						 	' }'
-						 ) SEPARATOR ', '),
-					']'
-				) expense
-			FROM purchase_expense_dtl
-			WHERE deleted_at='0000-00-00 00:00:00'
-			GROUP BY purchase_id 
-		) e ON e.purchase_id = p.purchase_id
-
-		LEFT JOIN (
-			SELECT 
-				purchase_id, 
-				CONCAT( 
-					'[', 
-						GROUP_CONCAT( CONCAT( 
-							'{\"documentId\":', document_id,
-							 	', \"purchaseId\":', IFNULL(purchase_id,0),
-							 	', \"documentName\":\"', IFNULL(document_name,''),
-							 	'\", \"documentSize\":\"', IFNULL(document_size,''),
-							 	'\", \"documentFormat\":\"', IFNULL(document_format,''),
-							 	'\", \"createdAt\":\"', DATE_FORMAT(created_at, '%d-%m-%Y'),
-							 	'\", \"updatedAt\":\"', DATE_FORMAT(updated_at, '%d-%m-%Y'),
-						 	'\" }'
-						 ) SEPARATOR ', '),
-					']'
-				) file
-			FROM purchase_doc_dtl
-			WHERE deleted_at='0000-00-00 00:00:00'
-			GROUP BY purchase_id 
-		) d ON d.purchase_id = p.purchase_id
-		where p.bill_type='purchase_bill' and
-		p.deleted_at='0000-00-00 00:00:00' and ".$isPurchaseOrder.$extraQuery.$orderBy);
-		DB::commit();
-		
-		if(count($purchaseIdDataResult)==0)
-		{
-			return $exceptionArray['204'];
+			else
+			{
+				$purchaseDataResult = $this->getDocumentData($purchaseIdDataResult);
+				return $purchaseDataResult;
+			}
 		}
 		else
 		{
-			return json_encode($purchaseIdDataResult);
-		}
-	}
+			$isPurchaseOrder = array_key_exists('ispurchaseorder',$headerData) ? "is_purchaseorder='ok'" : "is_purchaseorder='not'";
 
-	public function getPurchaseBillMonthwise()
-	{
-		//database selection
-		$database = "";
-		$constantDatabase = new ConstantClass();
-		$databaseName = $constantDatabase->constantDatabase();
-		DB::beginTransaction();
-		DB::statement('SET group_concat_max_len = 1000000');
-		$purchaseData = $this->database->select("SELECT 
-		concat(YEAR(transaction_date),'-',MONTH(transaction_date)) as Month,
-		sum(total) as Total,
-		sum(total_discount) as totalDiscount,
-		sum(extra_charge) as extraCharge,
-		sum(tax) as Tax,
-		sum(grand_total) as grandTotal,
-		sum(advance) as Advance,
-		sum(balance) as Balance  FROM `purchase_bill` GROUP BY MONTH(transaction_date), YEAR(transaction_date)");
-		DB::commit();
-		foreach($purchaseData as $data)
-		{
-			$month = explode("-",$data->Month)[1];
-			$year = explode("-",$data->Month)[0];
-			$data->Month = date('F-Y',strtotime($data->Month."-01"));
-			$data->purchase =  $this->database->select("
-				select 
-				p.purchase_id,
-				p.vendor_id,
-				p.product_array,
-				p.bill_number,
-				p.total,
-				p.tax,
-				p.grand_total,
-				p.payment_mode,
-				p.bank_ledger_id,
-				p.bank_name,
-				p.check_number,
-				p.total_discounttype,
-				p.total_discount,
-				p.total_cgst_percentage,
-				p.total_sgst_percentage,
-				p.total_igst_percentage,
-				p.advance,
-				p.extra_charge,
-				p.balance,
-				p.transaction_type,
-				p.transaction_date,
-				p.entry_date,
-				p.due_date,
-				p.bill_type,
-				p.remark,
-				p.company_id,
-				p.jf_id,
-				p.created_at,
-				p.updated_at,
-				e.expense,
-				d.file
-				from purchase_bill as p
-				LEFT JOIN (
-					SELECT 
-						purchase_id, 
-						CONCAT( 
-							'[', 
-								GROUP_CONCAT( CONCAT( 
-									'{\"purchaseExpenseId\":', purchase_expense_id,
-									 	', \"expenseType\":\"', IFNULL(expense_type,''),
-									 	'\", \"expenseId\":', IFNULL(expense_id,0),
-									 	', \"expenseName\":\"', IFNULL(expense_name,''),
-									 	'\", \"expenseValue\":\"', IFNULL(expense_value,''),
-									 	'\", \"expenseTax\":\"', IFNULL(expense_tax,''),
-									 	'\", \"expenseOperation\":\"', IFNULL(expense_operation,''),
-									 	'\", \"purchaseId\":', IFNULL(purchase_id,0),
-								 	' }'
-								 ) SEPARATOR ', '),
-							']'
-						) expense
-					FROM purchase_expense_dtl
-					WHERE deleted_at='0000-00-00 00:00:00'
-					GROUP BY purchase_id 
-				) e ON e.purchase_id = p.purchase_id
-
-				LEFT JOIN (
-					SELECT 
-						purchase_id, 
-						CONCAT( 
-							'[', 
-								GROUP_CONCAT( CONCAT( 
-									'{\"documentId\":', document_id,
-									 	', \"purchaseId\":', IFNULL(purchase_id,0),
-									 	', \"documentName\":\"', IFNULL(document_name,''),
-									 	'\", \"documentSize\":\"', IFNULL(document_size,''),
-									 	'\", \"documentFormat\":\"', IFNULL(document_format,''),
-									 	'\", \"createdAt\":\"', DATE_FORMAT(created_at, '%d-%m-%Y'),
-									 	'\", \"updatedAt\":\"', DATE_FORMAT(updated_at, '%d-%m-%Y'),
-								 	'\" }'
-								 ) SEPARATOR ', '),
-							']'
-						) file
-					FROM purchase_doc_dtl
-					WHERE deleted_at='0000-00-00 00:00:00'
-					GROUP BY purchase_id 
-				) d ON d.purchase_id = p.purchase_id
-				where p.bill_type='purchase_bill' and MONTH(transaction_date)=$month and YEAR(transaction_date)=$year and
-				p.deleted_at='0000-00-00 00:00:00'");
+			//get all the purchase-bill data
+			DB::beginTransaction();
+			$purchaseIdDataResult = DB::connection($databaseName)->select("select 
+			purchase_id,
+			vendor_id,
+			product_array,
+			bill_number,
+			total,
+			tax,
+			grand_total,
+			payment_mode,
+			bank_ledger_id,
+			bank_name,
+			check_number,
+			total_discounttype,
+			total_discount,
+			total_cgst_percentage,
+			total_sgst_percentage,
+			total_igst_percentage,
+			advance,
+			extra_charge,
+			balance,
+			transaction_type,
+			transaction_date,
+			entry_date,
+			bill_type,
+			remark,
+			company_id,
+			jf_id,
+			created_at,
+			updated_at 
+			from purchase_bill 
+			where bill_type='purchase_bill' and
+			deleted_at='0000-00-00 00:00:00' and ".$isPurchaseOrder);
 			DB::commit();
-		}
-		return json_encode($purchaseData);
-	}
-	
-	public function getPurchaseBillById($id)
-	{
-
-		//database selection
-		$database = "";
-		$constantDatabase = new ConstantClass();
-		$databaseName = $constantDatabase->constantDatabase();
-		DB::beginTransaction();
-		DB::statement('SET group_concat_max_len = 1000000');
-		$purchaseData = $this->database->select("
-		select 
-		p.purchase_id,
-		p.vendor_id,
-		p.product_array,
-		p.bill_number,
-		p.total,
-		p.tax,
-		p.grand_total,
-		p.payment_mode,
-		p.bank_ledger_id,
-		p.bank_name,
-		p.check_number,
-		p.total_discounttype,
-		p.total_discount,
-		p.total_cgst_percentage,
-		p.total_sgst_percentage,
-		p.total_igst_percentage,
-		p.advance,
-		p.extra_charge,
-		p.balance,
-		p.transaction_type,
-		p.transaction_date,
-		p.entry_date,
-		p.due_date,
-		p.bill_type,
-		p.remark,
-		p.company_id,
-		p.jf_id,
-		p.created_at,
-		p.updated_at,
-		e.expense,
-		d.file
-		from purchase_bill as p
-		LEFT JOIN (
-			SELECT 
-				purchase_id, 
-				CONCAT( 
-					'[', 
-						GROUP_CONCAT( CONCAT( 
-							'{\"purchaseExpenseId\":', purchase_expense_id,
-							 	', \"expenseType\":\"', IFNULL(expense_type,''),
-							 	'\", \"expenseId\":', IFNULL(expense_id,0),
-							 	', \"expenseName\":\"', IFNULL(expense_name,''),
-							 	'\", \"expenseValue\":\"', IFNULL(expense_value,''),
-							 	'\", \"expenseTax\":\"', IFNULL(expense_tax,''),
-							 	'\", \"expenseOperation\":\"', IFNULL(expense_operation,''),
-							 	'\", \"purchaseId\":', IFNULL(purchase_id,0),
-						 	' }'
-						 ) SEPARATOR ', '),
-					']'
-				) expense
-			FROM purchase_expense_dtl
-			WHERE deleted_at='0000-00-00 00:00:00'
-			GROUP BY purchase_id 
-		) e ON e.purchase_id = p.purchase_id
-
-		LEFT JOIN (
-			SELECT 
-				purchase_id, 
-				CONCAT( 
-					'[', 
-						GROUP_CONCAT( CONCAT( 
-							'{\"documentId\":', document_id,
-							 	', \"purchaseId\":', IFNULL(purchase_id,0),
-							 	', \"documentName\":\"', IFNULL(document_name,''),
-							 	'\", \"documentSize\":\"', IFNULL(document_size,''),
-							 	'\", \"documentFormat\":\"', IFNULL(document_format,''),
-							 	'\", \"createdAt\":\"', DATE_FORMAT(created_at, '%d-%m-%Y'),
-							 	'\", \"updatedAt\":\"', DATE_FORMAT(updated_at, '%d-%m-%Y'),
-						 	'\" }'
-						 ) SEPARATOR ', '),
-					']'
-				) file
-			FROM purchase_doc_dtl
-			WHERE deleted_at='0000-00-00 00:00:00'
-			GROUP BY purchase_id 
-		) d ON d.purchase_id = p.purchase_id
-		where p.bill_type='purchase_bill' and p.purchase_id = '$id' and
-		p.deleted_at='0000-00-00 00:00:00'");
-		DB::commit();
-		foreach($purchaseData as $data)
-		{
-			if(is_null($data->file))
+			
+			if(count($purchaseIdDataResult)==0)
 			{
-				$data->file=[];
+				return $exceptionArray['204'];
+			}
+			else
+			{
+				$purchaseDataResult = $this->getDocumentData($purchaseIdDataResult);
+				return $purchaseDataResult;
 			}
 		}
-		return json_encode($purchaseData);
+	}
+	
+	/**
+	 * get next purchase-bill data
+	 * @param  header-data
+	 * returns the exception-message/sales data
+	*/
+	public function getNextPurchaseId($headerData)
+	{
+		//database selection
+		$database = "";
+		$constantDatabase = new ConstantClass();
+		$databaseName = $constantDatabase->constantDatabase();
+		// get exception message
+		$exception = new ExceptionMessage();
+		$exceptionArray = $exception->messageArrays();
+		$isPurchaseOrder = array_key_exists('ispurchaseorder',$headerData) ? "is_purchaseorder='ok'" : "is_purchaseorder='not'";
+
+		$purchaseId = $headerData['nextpurchaseid'][0]+1;
+		$result = $this->getPurchasePreviousNextData($headerData,$purchaseId);
+		if(count($result)==0)
+		{
+			DB::beginTransaction();
+			$nextDescId = DB::connection($databaseName)->select("select 
+			purchase_id
+			from purchase_bill 
+			where bill_type='purchase_bill' and
+			company_id = '".$headerData['companyid'][0]."' and
+			".$isPurchaseOrder." and
+			deleted_at='0000-00-00 00:00:00' 
+			order by purchase_id desc limit 1");
+			DB::commit();
+			if($purchaseId>$nextDescId[0]->purchase_id)
+			{
+				return $exceptionArray['204'];
+			}
+			else
+			{
+				for($arrayData=$purchaseId+1;$arrayData<=$nextDescId[0]->purchase_id;$arrayData++)
+				{
+					$innerResult = $this->getPurchasePreviousNextData($headerData,$arrayData);
+					if(count($innerResult)!=0)
+					{
+						break;
+					}
+					if($arrayData==$nextDescId[0]->purchase_id && count($innerResult)==0)
+					{
+						return $exceptionArray['204'];
+					}
+					$purchaseId++;
+				}
+				$saleDataResult = $this->getDocumentData($innerResult);
+				return $saleDataResult;
+			}
+		}
+		else
+		{
+			$saleDataResult = $this->getDocumentData($result);
+			return $saleDataResult;
+		}
+	}
+	
+	/**
+	 * get first-last purchase-bill data
+	 * @param  header-data
+	 * returns the exception-message/sales data
+	*/
+	public function getFirstLastPurchaseBillData($headerData)
+	{
+		//database selection
+		$database = "";
+		$constantDatabase = new ConstantClass();
+		$databaseName = $constantDatabase->constantDatabase();
+		// get exception message
+		$exception = new ExceptionMessage();
+		$exceptionArray = $exception->messageArrays();
+		$isPurchaseOrder = array_key_exists('ispurchaseorder',$headerData) ? "is_purchaseorder='ok'" : "is_purchaseorder='not'";
+
+		if(strcmp($headerData['operation'][0],'first')==0)
+		{
+			DB::beginTransaction();
+			$firstPurchaseDataResult = DB::connection($databaseName)->select("select 
+			purchase_id,
+			vendor_id,
+			product_array,
+			bill_number,
+			total,
+			tax,
+			grand_total,
+			payment_mode,
+			bank_ledger_id,
+			bank_name,
+			check_number,
+			total_discounttype,
+			total_discount,
+			total_cgst_percentage,
+			total_sgst_percentage,
+			total_igst_percentage,
+			advance,
+			extra_charge,
+			balance,
+			transaction_type,
+			transaction_date,
+			entry_date,
+			bill_type,
+			remark,
+			company_id,
+			jf_id,
+			created_at,
+			updated_at 
+			from purchase_bill 
+			where bill_type='purchase_bill' and
+			company_id = '".$headerData['companyid'][0]."' and
+			".$isPurchaseOrder." and
+			deleted_at='0000-00-00 00:00:00' order by purchase_id asc limit 1");
+			DB::commit();
+			
+			if(count($firstPurchaseDataResult)==0)
+			{
+				return $exceptionArray['204'];
+			}
+			else
+			{
+				$purchaseDataResult = $this->getDocumentData($firstPurchaseDataResult);
+				return $purchaseDataResult;
+			}
+		}
+		else if(strcmp($headerData['operation'][0],'last')==0)
+		{
+			DB::beginTransaction();
+			$lastPurchaseDataResult = DB::connection($databaseName)->select("select 
+			purchase_id,
+			vendor_id,
+			product_array,
+			bill_number,
+			total,
+			tax,
+			grand_total,
+			payment_mode,
+			bank_ledger_id,
+			bank_name,
+			check_number,
+			total_discounttype,
+			total_discount,
+			total_cgst_percentage,
+			total_sgst_percentage,
+			total_igst_percentage,
+			advance,
+			extra_charge,
+			balance,
+			transaction_type,
+			transaction_date,
+			entry_date,
+			bill_type,
+			remark,
+			company_id,
+			jf_id,
+			created_at,
+			updated_at 
+			from purchase_bill 
+			where bill_type='purchase_bill' and
+			company_id = '".$headerData['companyid'][0]."' and
+			".$isPurchaseOrder." and
+			deleted_at='0000-00-00 00:00:00' order by purchase_id desc limit 1");
+			DB::commit();
+			
+			if(count($lastPurchaseDataResult)==0)
+			{
+				return $exceptionArray['204'];
+			}
+			else
+			{
+				$purchaseDataResult = $this->getDocumentData($lastPurchaseDataResult);
+				return $purchaseDataResult;
+			}
+		}
+	}
+	
+	/**
+	 * get previous purchase-bill data
+	 * @param  header-data
+	 * returns the exception-message/sales data
+	*/
+	public function getPreviousPurchaseId($headerData)
+	{
+		//database selection
+		$database = "";
+		$constantDatabase = new ConstantClass();
+		$databaseName = $constantDatabase->constantDatabase();
+		// get exception message
+		$exception = new ExceptionMessage();
+		$exceptionArray = $exception->messageArrays();
+		$isPurchaseOrder = array_key_exists('ispurchaseorder',$headerData) ? "is_purchaseorder='ok'" : "is_purchaseorder='not'";
+
+		if($headerData['previouspurchaseid'][0]==0)
+		{
+			DB::beginTransaction();
+			$raw = DB::connection($databaseName)->select("select 
+			purchase_id,
+			vendor_id,
+			product_array,
+			bill_number,
+			total,
+			tax,
+			grand_total,
+			payment_mode,
+			bank_ledger_id,
+			bank_name,
+			check_number,
+			total_discounttype,
+			total_discount,
+			total_cgst_percentage,
+			total_sgst_percentage,
+			total_igst_percentage,
+			advance,
+			extra_charge,
+			balance,
+			transaction_type,
+			transaction_date,
+			entry_date,
+			bill_type,
+			remark,
+			company_id,
+			jf_id,
+			created_at,
+			updated_at 
+			from purchase_bill 
+			where bill_type='purchase_bill' and
+			company_id = '".$headerData['companyid'][0]."' and
+			".$isPurchaseOrder." and
+			deleted_at='0000-00-00 00:00:00'
+			order by purchase_id desc limit 1");
+			DB::commit();
+			if(count($raw)==0)
+			{
+				return $exceptionArray['204'];
+			}
+			else
+			{
+				$purchaseDataResult = $this->getDocumentData($raw);
+				return $purchaseDataResult;
+			}
+		}
+		else
+		{
+			$purchaseId = $headerData['previouspurchaseid'][0]-1;
+			$result = $this->getPurchasePreviousNextData($headerData,$purchaseId);
+			if(count($result)==0)
+			{
+				DB::beginTransaction();
+				$previousAscId = DB::connection($databaseName)->select("select 
+				purchase_id
+				from purchase_bill 
+				where bill_type='purchase_bill' and
+				company_id = '".$headerData['companyid'][0]."' and
+				deleted_at='0000-00-00 00:00:00' and ".$isPurchaseOrder."
+				order by purchase_id asc limit 1");
+				DB::commit();
+				if($purchaseId<$previousAscId[0]->purchase_id)
+				{
+					return $exceptionArray['204'];
+				}
+				else
+				{
+					for($arrayData=$purchaseId-1;$arrayData>=$previousAscId[0]->purchase_id;$arrayData--)
+					{
+						$innerResult = $this->getPurchasePreviousNextData($headerData,$arrayData);
+						if(count($innerResult)!=0)
+						{
+							break;
+						}
+						if($arrayData==$previousAscId[0]->purchase_id && count($innerResult)==0)
+						{
+							return $exceptionArray['204'];
+						}
+						$purchaseId++;
+					}
+					$purchaseDataResult = $this->getDocumentData($innerResult);
+					return $purchaseDataResult;
+				}
+			}
+			else
+			{
+				$purchaseDataResult = $this->getDocumentData($result);
+				return $purchaseDataResult;
+			}
+		}
+	}
+	
+	/**
+	 * get previous-next purchase-bill data
+	 * @param  header-data
+	 * returns the exception-message/sales data
+	*/
+	public function getPurchasePreviousNextData($headerData,$purchaseId)
+	{
+		$isPurchaseOrder = array_key_exists('ispurchaseorder',$headerData) ? "is_purchaseorder='ok'" : "is_purchaseorder='not'";
+
+		//database selection
+		$database = "";
+		$constantDatabase = new ConstantClass();
+		$databaseName = $constantDatabase->constantDatabase();
+		DB::beginTransaction();
+		$purchaseData = DB::connection($databaseName)->select("select 
+		purchase_id,
+		vendor_id,
+		product_array,
+		bill_number,
+		total,
+		tax,
+		grand_total,
+		payment_mode,
+		bank_ledger_id,
+		bank_name,
+		check_number,
+		total_discounttype,
+		total_discount,
+		total_cgst_percentage,
+		total_sgst_percentage,
+		total_igst_percentage,
+		advance,
+		extra_charge,
+		balance,
+		transaction_type,
+		transaction_date,
+		entry_date,
+		bill_type,
+		remark,
+		company_id,
+		jf_id,
+		created_at,
+		updated_at 
+		from purchase_bill 
+		where bill_type='purchase_bill' and
+		company_id = '".$headerData['companyid'][0]."' and
+		".$isPurchaseOrder." and
+		deleted_at='0000-00-00 00:00:00' and
+		purchase_id='".$purchaseId."'");
+		DB::commit();
+		return $purchaseData;
 	}
 	/**
 	 * get previous-next purchase-bill data
@@ -610,90 +722,42 @@ class PurchaseBillModel extends Model
 		$constantDatabase = new ConstantClass();
 		$databaseName = $constantDatabase->constantDatabase();
 		DB::beginTransaction();
-		DB::statement('SET group_concat_max_len = 1000000');
-		$purchaseData = $this->database->select("
-		select 
-		p.purchase_id,
-		p.vendor_id,
-		p.product_array,
-		p.bill_number,
-		p.total,
-		p.tax,
-		p.grand_total,
-		p.payment_mode,
-		p.bank_ledger_id,
-		p.bank_name,
-		p.check_number,
-		p.total_discounttype,
-		p.total_discount,
-		p.total_cgst_percentage,
-		p.total_sgst_percentage,
-		p.total_igst_percentage,
-		p.advance,
-		p.extra_charge,
-		p.balance,
-		p.transaction_type,
-		p.transaction_date,
-		p.entry_date,
-		p.due_date,
-		p.bill_type,
-		p.remark,
-		p.company_id,
-		p.jf_id,
-		p.created_at,
-		p.updated_at,
-		e.expense,
-		d.file
-		from purchase_bill as p
-		LEFT JOIN (
-			SELECT 
-				purchase_id, 
-				CONCAT( 
-					'[', 
-						GROUP_CONCAT( CONCAT( 
-							'{\"purchaseExpenseId\":', purchase_expense_id,
-							 	', \"expenseType\":\"', IFNULL(expense_type,''),
-							 	'\", \"expenseId\":', IFNULL(expense_id,0),
-							 	', \"expenseName\":\"', IFNULL(expense_name,''),
-							 	'\", \"expenseValue\":\"', IFNULL(expense_value,''),
-							 	'\", \"expenseTax\":\"', IFNULL(expense_tax,''),
-							 	'\", \"expenseOperation\":\"', IFNULL(expense_operation,''),
-							 	'\", \"purchaseId\":', IFNULL(purchase_id,0),
-						 	' }'
-						 ) SEPARATOR ', '),
-					']'
-				) expense
-			FROM purchase_expense_dtl
-			WHERE deleted_at='0000-00-00 00:00:00'
-			GROUP BY purchase_id 
-		) e ON e.purchase_id = p.purchase_id
-
-		LEFT JOIN (
-			SELECT 
-				purchase_id, 
-				CONCAT( 
-					'[', 
-						GROUP_CONCAT( CONCAT( 
-							'{\"documentId\":', document_id,
-							 	', \"purchaseId\":', IFNULL(purchase_id,0),
-							 	', \"documentName\":\"', IFNULL(document_name,''),
-							 	'\", \"documentSize\":\"', IFNULL(document_size,''),
-							 	'\", \"documentFormat\":\"', IFNULL(document_format,''),
-							 	'\", \"createdAt\":\"', DATE_FORMAT(created_at, '%d-%m-%Y'),
-							 	'\", \"updatedAt\":\"', DATE_FORMAT(updated_at, '%d-%m-%Y'),
-						 	'\" }'
-						 ) SEPARATOR ', '),
-					']'
-				) file
-			FROM purchase_doc_dtl
-			WHERE deleted_at='0000-00-00 00:00:00'
-			GROUP BY purchase_id 
-		) d ON d.purchase_id = p.purchase_id
-		where p.bill_type='purchase_bill' and
-		p.company_id = '$companyId' and p.jf_id = '$jfId' and
-		p.deleted_at='0000-00-00 00:00:00'");
+		$purchaseData = DB::connection($databaseName)->select("select 
+		purchase_id,
+		vendor_id,
+		product_array,
+		bill_number,
+		total,
+		tax,
+		grand_total,
+		payment_mode,
+		bank_ledger_id,
+		bank_name,
+		check_number,
+		total_discounttype,
+		total_discount,
+		total_cgst_percentage,
+		total_sgst_percentage,
+		total_igst_percentage,
+		advance,
+		extra_charge,
+		balance,
+		transaction_type,
+		transaction_date,
+		entry_date,
+		bill_type,
+		remark,
+		company_id,
+		jf_id,
+		created_at,
+		updated_at 
+		from purchase_bill 
+		where bill_type='purchase_bill' and
+		company_id = '$companyId' and jf_id = '$jfId' and
+		deleted_at='0000-00-00 00:00:00'");
 		DB::commit();
-		return json_encode($purchaseData);
+		$saleDataResult = $this->getDocumentData($purchaseData);
+		return $saleDataResult;
 	}
 	
 	/**
@@ -712,13 +776,12 @@ class PurchaseBillModel extends Model
 		for($purchaseData=0;$purchaseData<count($purchaseArrayData);$purchaseData++)
 		{
 			DB::beginTransaction();
-			$purchaseExpenseResult[$purchaseData] = $this->database->select("select 
+			$purchaseExpenseResult[$purchaseData] = DB::connection($databaseName)->select("select 
 			purchase_expense_id as purchaseExpenseId,
 			expense_id as expenseId,
 			expense_name as expenseName,
 			expense_type as expenseType,
 			expense_value as expenseValue,
-			expense_tax as expenseTax,
 			expense_operation as expenseOperation,
 			purchase_id as purchaseId
 			from purchase_expense_dtl 
@@ -728,7 +791,7 @@ class PurchaseBillModel extends Model
 			$purchaseArrayData[$purchaseData]->expense = $purchaseExpenseResult[$purchaseData];
 			
 			DB::beginTransaction();
-			$documentResult[$purchaseData] = $this->database->select("select
+			$documentResult[$purchaseData] = DB::connection($databaseName)->select("select
 			document_id,
 			purchase_id,
 			document_name,
@@ -777,7 +840,7 @@ class PurchaseBillModel extends Model
 		//get exception message
 		$exception = new ExceptionMessage();
 		$exceptionArray = $exception->messageArrays();
-		$isPurchaseOrder = array_key_exists("ispurchaseorder",$data) ? "p.is_purchaseorder='ok'" : "p.is_purchaseorder='not'";
+		$isPurchaseOrder = array_key_exists("ispurchaseorder",$data) ? "is_purchaseorder='ok'" : "is_purchaseorder='not'";
 		
 		if(is_object($data))
 		{
@@ -785,89 +848,40 @@ class PurchaseBillModel extends Model
 			$toDate = $data->getToDate();
 		
 			DB::beginTransaction();
-			DB::statement('SET group_concat_max_len = 1000000');
-			$raw = $this->database->select("
-			select 
-			p.purchase_id,
-			p.vendor_id,
-			p.product_array,
-			p.bill_number,
-			p.total,
-			p.tax,
-			p.grand_total,
-			p.payment_mode,
-			p.bank_ledger_id,
-			p.bank_name,
-			p.check_number,
-			p.total_discounttype,
-			p.total_discount,
-			p.total_cgst_percentage,
-			p.total_sgst_percentage,
-			p.total_igst_percentage,
-			p.advance,
-			p.extra_charge,
-			p.balance,
-			p.transaction_type,
-			p.transaction_date,
-			p.entry_date,
-			p.due_date,
-			p.bill_type,
-			p.remark,
-			p.company_id,
-			p.jf_id,
-			p.created_at,
-			p.updated_at,
-			e.expense,
-			d.file
-			from purchase_bill as p
-			LEFT JOIN (
-				SELECT 
-					purchase_id, 
-					CONCAT( 
-						'[', 
-							GROUP_CONCAT( CONCAT( 
-								'{\"purchaseExpenseId\":', purchase_expense_id,
-								 	', \"expenseType\":\"', IFNULL(expense_type,''),
-								 	'\", \"expenseId\":', IFNULL(expense_id,0),
-								 	', \"expenseName\":\"', IFNULL(expense_name,''),
-								 	'\", \"expenseValue\":\"', IFNULL(expense_value,''),
-								 	'\", \"expenseTax\":\"', IFNULL(expense_tax,''),
-								 	'\", \"expenseOperation\":\"', IFNULL(expense_operation,''),
-								 	'\", \"purchaseId\":', IFNULL(purchase_id,0),
-							 	' }'
-							 ) SEPARATOR ', '),
-						']'
-					) expense
-				FROM purchase_expense_dtl
-				WHERE deleted_at='0000-00-00 00:00:00'
-				GROUP BY purchase_id 
-			) e ON e.purchase_id = p.purchase_id
-
-			LEFT JOIN (
-				SELECT 
-					purchase_id, 
-					CONCAT( 
-						'[', 
-							GROUP_CONCAT( CONCAT( 
-								'{\"documentId\":', document_id,
-								 	', \"purchaseId\":', IFNULL(purchase_id,0),
-								 	', \"documentName\":\"', IFNULL(document_name,''),
-								 	'\", \"documentSize\":\"', IFNULL(document_size,''),
-								 	'\", \"documentFormat\":\"', IFNULL(document_format,''),
-								 	'\", \"createdAt\":\"', DATE_FORMAT(created_at, '%d-%m-%Y'),
-								 	'\", \"updatedAt\":\"', DATE_FORMAT(updated_at, '%d-%m-%Y'),
-							 	'\" }'
-							 ) SEPARATOR ', '),
-						']'
-					) file
-				FROM purchase_doc_dtl
-				WHERE deleted_at='0000-00-00 00:00:00'
-				GROUP BY purchase_id 
-			) d ON d.purchase_id = p.purchase_id
-			where p.bill_type='purchase_bill' and
-			(p.entry_date BETWEEN '".$fromDate."' AND '".$toDate."') and 
-			p.company_id='".$companyId."' and 
-			p.deleted_at='0000-00-00 00:00:00' and ".$isPurchaseOrder);
+			$raw = DB::connection($databaseName)->select("select 
+			purchase_id,
+			vendor_id,
+			product_array,
+			bill_number,
+			total,
+			tax,
+			grand_total,
+			payment_mode,
+			bank_ledger_id,
+			bank_name,
+			check_number,
+			total_discounttype,
+			total_discount,
+			total_cgst_percentage,
+			total_sgst_percentage,
+			total_igst_percentage,
+			advance,
+			extra_charge,
+			balance,
+			transaction_type,
+			transaction_date,
+			entry_date,
+			bill_type,
+			remark,
+			company_id,
+			jf_id,
+			created_at,
+			updated_at  
+			from purchase_bill 
+			where bill_type='purchase_bill' and
+			(entry_date BETWEEN '".$fromDate."' AND '".$toDate."') and 
+			company_id='".$companyId."' and 
+			deleted_at='0000-00-00 00:00:00' and ".$isPurchaseOrder);
 			DB::commit();
 			if(count($raw)==0)
 			{
@@ -875,97 +889,48 @@ class PurchaseBillModel extends Model
 			}
 			else
 			{
-				
-				return json_encode($raw);
+				$purchaseDataResult = $this->getDocumentData($raw);
+				return $purchaseDataResult;
 			}
 		}
 		else if(is_array($data))
 		{
 			DB::beginTransaction();
-			DB::statement('SET group_concat_max_len = 1000000');
-			$raw = $this->database->select("
-			select 
-			p.purchase_id,
-			p.vendor_id,
-			p.product_array,
-			p.bill_number,
-			p.total,
-			p.tax,
-			p.grand_total,
-			p.payment_mode,
-			p.bank_ledger_id,
-			p.bank_name,
-			p.check_number,
-			p.total_discounttype,
-			p.total_discount,
-			p.total_cgst_percentage,
-			p.total_sgst_percentage,
-			p.total_igst_percentage,
-			p.advance,
-			p.extra_charge,
-			p.balance,
-			p.transaction_type,
-			p.transaction_date,
-			p.entry_date,
-			p.due_date,
-			p.bill_type,
-			p.remark,
-			p.company_id,
-			p.jf_id,
-			p.created_at,
-			p.updated_at,
-			e.expense,
-			d.file
-			from purchase_bill as p
-			LEFT JOIN (
-				SELECT 
-					purchase_id, 
-					CONCAT( 
-						'[', 
-							GROUP_CONCAT( CONCAT( 
-								'{\"purchaseExpenseId\":', purchase_expense_id,
-								 	', \"expenseType\":\"', IFNULL(expense_type,''),
-								 	'\", \"expenseId\":', IFNULL(expense_id,0),
-								 	', \"expenseName\":\"', IFNULL(expense_name,''),
-								 	'\", \"expenseValue\":\"', IFNULL(expense_value,''),
-								 	'\", \"expenseTax\":\"', IFNULL(expense_tax,''),
-								 	'\", \"expenseOperation\":\"', IFNULL(expense_operation,''),
-								 	'\", \"purchaseId\":', IFNULL(purchase_id,0),
-							 	' }'
-							 ) SEPARATOR ', '),
-						']'
-					) expense
-				FROM purchase_expense_dtl
-				WHERE deleted_at='0000-00-00 00:00:00'
-				GROUP BY purchase_id 
-			) e ON e.purchase_id = p.purchase_id
-
-			LEFT JOIN (
-				SELECT 
-					purchase_id, 
-					CONCAT( 
-						'[', 
-							GROUP_CONCAT( CONCAT( 
-								'{\"documentId\":', document_id,
-								 	', \"purchaseId\":', IFNULL(purchase_id,0),
-								 	', \"documentName\":\"', IFNULL(document_name,''),
-								 	'\", \"documentSize\":\"', IFNULL(document_size,''),
-								 	'\", \"documentFormat\":\"', IFNULL(document_format,''),
-								 	'\", \"createdAt\":\"', DATE_FORMAT(created_at, '%d-%m-%Y'),
-								 	'\", \"updatedAt\":\"', DATE_FORMAT(updated_at, '%d-%m-%Y'),
-							 	'\" }'
-							 ) SEPARATOR ', '),
-						']'
-					) file
-				FROM purchase_doc_dtl
-				WHERE deleted_at='0000-00-00 00:00:00'
-				GROUP BY purchase_id 
-			) d ON d.purchase_id = p.purchase_id
-			where p.bill_type='purchase_bill' and
+			$raw = DB::connection($databaseName)->select("select 
+			purchase_id,
+			vendor_id,
+			product_array,
+			bill_number,
+			total,
+			tax,
+			grand_total,
+			payment_mode,
+			bank_ledger_id,
+			bank_name,
+			check_number,
+			total_discounttype,
+			total_discount,
+			total_cgst_percentage,
+			total_sgst_percentage,
+			total_igst_percentage,
+			advance,
+			extra_charge,
+			balance,
+			transaction_type,
+			transaction_date,
+			entry_date,
+			bill_type,
+			remark,
+			company_id,
+			jf_id,
+			created_at,
+			updated_at 
+			from purchase_bill 
+			where bill_type='purchase_bill' and
 			".$isPurchaseOrder." and
-			p.company_id='".$companyId."' and 
-			p.deleted_at='0000-00-00 00:00:00' and 
-			(p.bill_number='".$data['billnumber'][0]."' or p.vendor_id in (select ledger_id from ledger_mst where ledger_name like '%".$data['billnumber'][0]."%'))");
+			company_id='".$companyId."' and 
+			deleted_at='0000-00-00 00:00:00' and 
+			(bill_number='".$data['billnumber'][0]."' or vendor_id in (select ledger_id from ledger_mst where ledger_name like '%".$data['billnumber'][0]."%'))");
 			DB::commit();
 			if(count($raw)==0)
 			{
@@ -973,7 +938,8 @@ class PurchaseBillModel extends Model
 			}
 			else
 			{
-				return json_encode($raw);
+				$purchaseDataResult = $this->getDocumentData($raw);
+				return $purchaseDataResult;
 			}
 		}
 	}
@@ -1001,7 +967,7 @@ class PurchaseBillModel extends Model
 		}
 		
 		$purchaseIdData = $this->getPurchaseBillData($purchaseArray);
-		$jsonDecodedPurchaseData = json_decode($purchaseIdData);
+		$jsonDecodedPurchaseData = json_decode(json_decode($purchaseIdData)->purchaseBillData);
 		
 		// $productArray = $jsonDecodedPurchaseData[0]->product_array;
 		// $inventoryCount = count(json_decode($productArray));
@@ -1009,7 +975,7 @@ class PurchaseBillModel extends Model
 		// {
 		// 	$inventoryData = json_decode($productArray);
 		// 	DB::beginTransaction();
-		// 	$getTransactionSummaryData[$productArrayData] = $this->database->select("select 
+		// 	$getTransactionSummaryData[$productArrayData] = DB::connection($databaseName)->select("select 
 		// 	product_trn_summary_id,
 		// 	qty
 		// 	from product_trn_summary
@@ -1021,7 +987,7 @@ class PurchaseBillModel extends Model
 		// 		// $qty = $inventoryData[$productArrayData]->qty*(-1);
 		// 		// //insert data
 		// 		// DB::beginTransaction();
-		// 		// $insertionResult[$productArrayData] = $this->database->statement("insert into 
+		// 		// $insertionResult[$productArrayData] = DB::connection($databaseName)->statement("insert into 
 		// 		// product_trn_summary(qty,company_id,branch_id,product_id)
 		// 		// values('".$qty."',
 		// 		// 	   '".$jsonDecodedPurchaseData[0]->company_id."',
@@ -1034,7 +1000,7 @@ class PurchaseBillModel extends Model
 		// 		$qty = $getTransactionSummaryData[$productArrayData][0]->qty-$inventoryData[$productArrayData]->qty;
 		// 		//update data
 		// 		DB::beginTransaction();
-		// 		$updateResult = $this->database->statement("update 
+		// 		$updateResult = DB::connection($databaseName)->statement("update 
 		// 		product_trn_summary set qty='".$qty."'
 		// 		where product_trn_summary_id='".$getTransactionSummaryData[$productArrayData][0]->product_trn_summary_id."' and
 		// 		deleted_at='0000-00-00 00:00:00'");
@@ -1052,7 +1018,7 @@ class PurchaseBillModel extends Model
 			{
 				//delete ledgerId_ledger_dtl data as per given ledgerId and jf_id
 				DB::beginTransaction();
-				$deleteLedgerData = $this->database->statement("update
+				$deleteLedgerData = DB::connection($databaseName)->statement("update
 				".$value->ledger_id."_ledger_dtl set
 				deleted_at = '".$mytime."'
 				where jf_id = ".$jsonDecodedPurchaseData[0]->jf_id." and
@@ -1062,27 +1028,32 @@ class PurchaseBillModel extends Model
 		}
 		//delete journal data
 		DB::beginTransaction();
-		$deleteJournalData = $this->database->statement("update
+		$deleteJournalData = DB::connection($databaseName)->statement("update
 		journal_dtl set
 		deleted_at = '".$mytime."'
 		where jf_id = ".$jsonDecodedPurchaseData[0]->jf_id." and
 		deleted_at='0000-00-00 00:00:00'");
-		$deleteProductTrnData = $this->database->statement("update
+		DB::commit();
+		//delete product_trn data
+		DB::beginTransaction();
+		$deleteProductTrnData = DB::connection($databaseName)->statement("update
 		product_trn set
 		deleted_at = '".$mytime."'
 		where jf_id = ".$jsonDecodedPurchaseData[0]->jf_id." and
 		deleted_at='0000-00-00 00:00:00'");
-		$deleteBillData = $this->database->statement("update
+		DB::commit();
+		//delete purchase-bill data 
+		DB::beginTransaction();
+		$deleteBillData = DB::connection($databaseName)->statement("update
 		purchase_bill set
 		deleted_at = '".$mytime."'
 		where purchase_id = ".$purchaseId." and
 		deleted_at='0000-00-00 00:00:00'");
-		$deleteBillData = $this->database->statement("update
-		purchase_inventory_dtl set
-		deleted_at = '".$mytime."'
-		where purchase_id = ".$purchaseId." and
-		deleted_at='0000-00-00 00:00:00'");
-		$deleteBillData = $this->database->statement("update
+		DB::commit();
+
+		//delete purchase-expense-bill data 
+		DB::beginTransaction();
+		$deleteBillData = DB::connection($databaseName)->statement("update
 		purchase_expense_dtl set
 		deleted_at = '".$mytime."'
 		where purchase_id = ".$purchaseId." and

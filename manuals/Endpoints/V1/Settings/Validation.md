@@ -1,3 +1,0 @@
-##### Invoice Validation Rules
-
-- pending

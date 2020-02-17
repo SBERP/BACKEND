@@ -17,7 +17,6 @@ class EncodeAllData
 			
 		$decodedJson = json_decode($status,true);
 		$productCategory = new ProductCategory();
-		$data = array();
 		for($decodedData=0;$decodedData<count($decodedJson);$decodedData++)
 		{
 			$createdAt[$decodedData] = $decodedJson[$decodedData]['created_at'];
@@ -42,15 +41,19 @@ class EncodeAllData
 				$productCategory->setUpdated_at($convertedUpdatedDate[$decodedData]);
 				$getUpdatedDate[$decodedData] = $productCategory->getUpdated_at();
 			}
-			$data[$decodedData]= array(
-				'productCategoryName' => $productCatName[$decodedData],
-				'productCategoryId' =>$productCatId[$decodedData],
-				'productCategoryDescription' =>$productCatDesc[$decodedData],
-				'isDisplay' => $isDisplay[$decodedData],
-				'createdAt' => $getCreatedDate[$decodedData],
-				'updatedAt' =>$getUpdatedDate[$decodedData],
-				'productParentCategoryId' =>$productParentCatId[$decodedData]
-			);
+		}
+		$data = array();
+		for($jsonData=0;$jsonData<count($decodedJson);$jsonData++)
+		{
+			$data[$jsonData]= array(
+				'productCategoryName' => $productCatName[$jsonData],
+				'productCategoryId' =>$productCatId[$jsonData],
+				'productCategoryDescription' =>$productCatDesc[$jsonData],
+				'isDisplay' => $isDisplay[$jsonData],
+				'createdAt' => $getCreatedDate[$jsonData],
+				'updatedAt' =>$getUpdatedDate[$jsonData],
+				'productParentCategoryId' =>$productParentCatId[$jsonData]
+			);	
 		}
 		return json_encode($data);
 	}

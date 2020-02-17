@@ -126,7 +126,7 @@ return [
         /*
          * Laravel Framework Service Providers...
          */
-        Illuminate\Auth\AuthServiceProvider::class,
+         Illuminate\Auth\AuthServiceProvider::class,
         Illuminate\Broadcasting\BroadcastServiceProvider::class,
         Illuminate\Bus\BusServiceProvider::class,
         Illuminate\Cache\CacheServiceProvider::class,
@@ -206,6 +206,7 @@ return [
         'Validator' => Illuminate\Support\Facades\Validator::class,
         'View' => Illuminate\Support\Facades\View::class,
         'Carbon' => 'Carbon\Carbon'
+
     ],
 	'packages' => [
         'Companies',
@@ -226,7 +227,6 @@ return [
         'Clients',
         'Bills',
         'SalesReturns',
-        'PurchaseReturns',
         'TrialBalance',
         'BalanceSheet',
         'ProfitLoss',
@@ -246,10 +246,7 @@ return [
         'Expenses',
         'PurchaseBills',
         'MeasurementUnits',
-        'Merge',
-        'ReportBuilder',
-        'CreditNotes',
-        'DebitNotes'
+        'Merge'
 	],
 
     /*

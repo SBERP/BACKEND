@@ -122,7 +122,6 @@ class EncodeAllData extends Setting
 					'productVariantStatus' => $decodedSettingData->product_variant_status,
 					'productAdvanceMouStatus' => isset($decodedSettingData->product_advance_mou_status) ? $decodedSettingData->product_advance_mou_status : 'disable',
 					'productMeasurementType' => $decodedSettingData->product_measurement_type,
-					'productDeleteStatus' => isset($decodedSettingData->product_delete_status) ? $decodedSettingData->product_delete_status : 'enable',
 					'createdAt' => $getCreatedDate[$decodedData],
 					'updatedAt' => $getUpdatedDate[$decodedData]
 				);
@@ -133,36 +132,6 @@ class EncodeAllData extends Setting
 					'settingId' => $decodedJson[$decodedData]['setting_id'],
 					'settingType' => $decodedJson[$decodedData]['setting_type'],
 					'inventoryItemizeStatus' => $decodedSettingData->inventory_itemize_status,
-					'createdAt' => $getCreatedDate[$decodedData],
-					'updatedAt' => $getUpdatedDate[$decodedData]
-				);
-			}
-			else if(strcmp($decodedJson[$decodedData]['setting_type'],$constantArray['languageSetting'])==0)
-			{
-				$data[$decodedData]= array(
-					'settingId' => $decodedJson[$decodedData]['setting_id'],
-					'settingType' => $decodedJson[$decodedData]['setting_type'],
-					'languageSettingType' => $decodedSettingData->language_setting_type,
-					'createdAt' => $getCreatedDate[$decodedData],
-					'updatedAt' => $getUpdatedDate[$decodedData]
-				);
-			}
-			else if(strcmp($decodedJson[$decodedData]['setting_type'],$constantArray['taxationSetting'])==0)
-			{
-				$data[$decodedData]= array(
-					'settingId' => $decodedJson[$decodedData]['setting_id'],
-					'settingType' => $decodedJson[$decodedData]['setting_type'],
-					'taxationGstStatus' => $decodedSettingData->taxation_gst_status,
-					'createdAt' => $getCreatedDate[$decodedData],
-					'updatedAt' => $getUpdatedDate[$decodedData]
-				);
-			}
-			else if(strcmp($decodedJson[$decodedData]['setting_type'],$constantArray['workFlowSetting'])==0)
-			{
-				$data[$decodedData]= array(
-					'settingId' => $decodedJson[$decodedData]['setting_id'],
-					'settingType' => $decodedJson[$decodedData]['setting_type'],
-					'workflowQuotationStatus' => $decodedSettingData->workflow_quotation_status,
 					'createdAt' => $getCreatedDate[$decodedData],
 					'updatedAt' => $getUpdatedDate[$decodedData]
 				);
@@ -199,7 +168,6 @@ class EncodeAllData extends Setting
 					'settingType' => $decodedJson[$decodedData]['setting_type'],
 					'advanceSalesStatus' => $decodedSettingData->advance_sales_status,
 					'advancePurchaseStatus' => $decodedSettingData->advance_purchase_status,
-					'advanceTaxReadOnlyStatus' => isset($decodedSettingData->advance_tax_read_only_status) ? $decodedSettingData->advance_tax_read_only_status : 'disable',
 					'createdAt' => $getCreatedDate[$decodedData],
 					'updatedAt' => $getUpdatedDate[$decodedData]
 				);

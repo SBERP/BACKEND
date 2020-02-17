@@ -46,9 +46,6 @@ class SettingModel extends Model
 		$advanceBillArray = array();
 		$webIntegrationArray = array();
 		$inventoryArray = array();
-		$languageArray = array();
-		$taxationArray = array();
-		$workFlowArray = array();
 		$barcodeFlag=0;
 		$chequeNoFlag=0;
 		$serviceDateFlag=0;
@@ -61,9 +58,6 @@ class SettingModel extends Model
 		$advanceBillFlag=0;
 		$webIntegrationnFlag=0;
 		$inventoryFlag=0;
-		$languageFlag=0;
-		$taxationFlag=0;
-		$workFlowFlag=0;
 		
 		//get exception message
 		$exception = new ExceptionMessage();
@@ -132,21 +126,6 @@ class SettingModel extends Model
 			{
 				$inventoryFlag=1;
 				$inventoryArray[$getSettingKey[$data]] = $getSettingData[$data];
-			}
-			else if(strcmp($constantArray['languageSetting'],$explodedSetting[0])==0)
-			{
-				$languageFlag=1;
-				$languageArray[$getSettingKey[$data]] = $getSettingData[$data];
-			}
-			else if(strcmp($constantArray['taxationSetting'],$explodedSetting[0])==0)
-			{
-				$taxationFlag=1;
-				$taxationArray[$getSettingKey[$data]] = $getSettingData[$data];
-			}
-			else if(strcmp($constantArray['workFlowSetting'],$explodedSetting[0])==0)
-			{
-				$workFlowFlag=1;
-				$workFlowArray[$getSettingKey[$data]] = $getSettingData[$data];
 			}
 		}
 
@@ -247,27 +226,6 @@ class SettingModel extends Model
 			values('".$constantArray['inventorySetting']."','".json_encode($inventoryArray)."','".$mytime."')");
 			DB::commit();
 		}
-		else if($languageFlag==1)
-		{
-			DB::beginTransaction();
-			$raw = DB::connection($databaseName)->statement("insert into setting_mst(setting_type,setting_data,created_at) 
-			values('".$constantArray['languageSetting']."','".json_encode($languageArray)."','".$mytime."')");
-			DB::commit();
-		}
-		else if($taxationFlag==1)
-		{
-			DB::beginTransaction();
-			$raw = DB::connection($databaseName)->statement("insert into setting_mst(setting_type,setting_data,created_at) 
-			values('".$constantArray['taxationSetting']."','".json_encode($taxationArray)."','".$mytime."')");
-			DB::commit();
-		}
-		else if($workFlowFlag==1)
-		{
-			DB::beginTransaction();
-			$raw = DB::connection($databaseName)->statement("insert into setting_mst(setting_type,setting_data,created_at) 
-			values('".$constantArray['workFlowSetting']."','".json_encode($workFlowArray)."','".$mytime."')");
-			DB::commit();
-		}
 
 		if($raw==1)
 		{
@@ -347,9 +305,6 @@ class SettingModel extends Model
 		$advanceBillArray = array();
 		$webIntegrationArray = array();
 		$inventoryArray = array();
-		$languageArray = array();
-		$taxationArray = array();
-		$workFlowArray = array();
 		date_default_timezone_set("Asia/Calcutta");
 		$mytime = Carbon\Carbon::now();
 		$keyValueString="";
@@ -366,9 +321,6 @@ class SettingModel extends Model
 		$advanceBillFlag=0;
 		$webIntegrationnFlag=0;
 		$inventoryFlag=0;
-		$languageFlag=0;
-		$taxationFlag=0;
-		$workFlowFlag=0;
 
 		$constantArray = $constantDatabase->constantVariable();
 		for($data=0;$data<count($settingData);$data++)
@@ -433,21 +385,6 @@ class SettingModel extends Model
 			{
 				$inventoryFlag=1;
 				$inventoryArray[$key[$data]] = $settingData[$data];
-			}
-			else if(strcmp($constantArray['languageSetting'],$explodedSetting[0])==0)
-			{
-				$languageFlag=1;
-				$languageArray[$key[$data]] = $settingData[$data];
-			}
-			else if(strcmp($constantArray['taxationSetting'],$explodedSetting[0])==0)
-			{
-				$taxationFlag=1;
-				$taxationArray[$key[$data]] = $settingData[$data];
-			}
-			else if(strcmp($constantArray['workFlowSetting'],$explodedSetting[0])==0)
-			{
-				$workFlowFlag=1;
-				$workFlowArray[$key[$data]] = $settingData[$data];
 			}
 		}
 		
@@ -580,39 +517,6 @@ class SettingModel extends Model
 			set setting_data = '".json_encode($inventoryArray)."',
 			updated_at = '".$mytime."'
 			where setting_type='".$constantArray['inventorySetting']."' and
-			deleted_at='0000-00-00 00:00:00'");
-			DB::commit();
-		}
-		else if($languageFlag==1)
-		{
-			DB::beginTransaction();
-			$raw = DB::connection($databaseName)->statement("update
-			setting_mst 
-			set setting_data = '".json_encode($languageArray)."',
-			updated_at = '".$mytime."'
-			where setting_type='".$constantArray['languageSetting']."' and
-			deleted_at='0000-00-00 00:00:00'");
-			DB::commit();
-		}
-		else if($taxationFlag==1)
-		{
-			DB::beginTransaction();
-			$raw = DB::connection($databaseName)->statement("update
-			setting_mst 
-			set setting_data = '".json_encode($taxationArray)."',
-			updated_at = '".$mytime."'
-			where setting_type='".$constantArray['taxationSetting']."' and
-			deleted_at='0000-00-00 00:00:00'");
-			DB::commit();
-		}
-		else if($workFlowFlag==1)
-		{
-			DB::beginTransaction();
-			$raw = DB::connection($databaseName)->statement("update
-			setting_mst 
-			set setting_data = '".json_encode($workFlowArray)."',
-			updated_at = '".$mytime."'
-			where setting_type='".$constantArray['workFlowSetting']."' and
 			deleted_at='0000-00-00 00:00:00'");
 			DB::commit();
 		}
@@ -793,9 +697,9 @@ class SettingModel extends Model
             }
         }
         $decodedLedgerData = array();
-        $ledgerDecodedData = array();
         if(count($decodedJsonData)!=0)
         {
+        	$ledgerDecodedData = array();
         	$ledgerModel = new LedgerModel();
             $ledgerCountData = count($decodedJsonData);
             for($ledgerArrayData=0;$ledgerArrayData<$ledgerCountData;$ledgerArrayData++)

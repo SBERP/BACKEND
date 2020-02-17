@@ -1,3 +1,0 @@
-##### Template Validation Rules
-
---pending

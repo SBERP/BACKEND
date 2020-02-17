@@ -70,42 +70,46 @@ class EncodeAllData extends CompanyService
 				$jobFormNumber->setUpdated_at($convertedUpdatedDate[$decodedData]);
 				$getUpdatedDate[$decodedData] = $jobFormNumber->getUpdated_at();
 			}
-			$data[$decodedData]= array(
-				'jobCardNumberId'=>$jobCardNumberId[$decodedData],
-				'jobCardNumberLabel' => $jobCardNumberLabel[$decodedData],
-				'jobCardNumberType' => $jobCardNumberType[$decodedData],
-				'startAt' => $startAt[$decodedData],
-				'endAt'=> $endAt[$decodedData],
-				'createdAt' => $getCreatedDate[$decodedData],
-				'updatedAt' => $getUpdatedDate[$decodedData],
+		}
+		$data = array();
+		for($jsonData=0;$jsonData<count($decodedJson);$jsonData++)
+		{
+			$data[$jsonData]= array(
+				'jobCardNumberId'=>$jobCardNumberId[$jsonData],
+				'jobCardNumberLabel' => $jobCardNumberLabel[$jsonData],
+				'jobCardNumberType' => $jobCardNumberType[$jsonData],
+				'startAt' => $startAt[$jsonData],
+				'endAt'=> $endAt[$jsonData],
+				'createdAt' => $getCreatedDate[$jsonData],
+				'updatedAt' => $getUpdatedDate[$jsonData],
 				
 				'company' => array(
-					'companyId' => $companyId[$decodedData],
-					'companyName' => $companyName[$decodedData],
-					'isDisplay' => $companyIsDisplay[$decodedData],
-					'createdAt' => $companyCreatedAt[$decodedData],
-					'updatedAt' => $companyUpdatedAt[$decodedData],
-					'companyDisplayName' => $companyDispName[$decodedData],
-					'address1' => $companyAddress1[$decodedData],
-					'address2' => $companyAddress2[$decodedData],
-					'pincode' => $companyPincode[$decodedData],
-					'pan' => $companyPanNo[$decodedData],
-					'tin' => $companyTinNo[$decodedData],
-					'vatNo' => $companyVatNo[$decodedData],
-					'serviceTaxNo' => $companyServiceTaxNo[$decodedData],
-					'baicCurrencySymbol' => $companybasicCurrencySymbol[$decodedData],
-					'formalName' => $companyFormalName[$decodedData],
-					'noOfDecimalPoints' => $companyNoOfDecimalPoints[$decodedData],
-					'currencySymbol' => $companyCurrencySymbol[$decodedData],
+					'companyId' => $companyId[$jsonData],
+					'companyName' => $companyName[$jsonData],
+					'isDisplay' => $companyIsDisplay[$jsonData],
+					'createdAt' => $companyCreatedAt[$jsonData],
+					'updatedAt' => $companyUpdatedAt[$jsonData],
+					'companyDisplayName' => $companyDispName[$jsonData],
+					'address1' => $companyAddress1[$jsonData],
+					'address2' => $companyAddress2[$jsonData],
+					'pincode' => $companyPincode[$jsonData],
+					'pan' => $companyPanNo[$jsonData],
+					'tin' => $companyTinNo[$jsonData],
+					'vatNo' => $companyVatNo[$jsonData],
+					'serviceTaxNo' => $companyServiceTaxNo[$jsonData],
+					'baicCurrencySymbol' => $companybasicCurrencySymbol[$jsonData],
+					'formalName' => $companyFormalName[$jsonData],
+					'noOfDecimalPoints' => $companyNoOfDecimalPoints[$jsonData],
+					'currencySymbol' => $companyCurrencySymbol[$jsonData],
 					'logo' => array(
-						'documentName' => $companyDocumentName[$decodedData],
-						'documentUrl' => $companyDocumentUrl[$decodedData],
-						'documentSize' => $companyDocumentSize[$decodedData],
-						'documentFormat' => $companyDocumentFormat[$decodedData]
+						'documentName' => $companyDocumentName[$jsonData],
+						'documentUrl' => $companyDocumentUrl[$jsonData],
+						'documentSize' => $companyDocumentSize[$jsonData],
+						'documentFormat' => $companyDocumentFormat[$jsonData]
 					),
-					'isDefault' => $companyIsDefault[$decodedData],
-					'stateAbb' => $companyStateAbb[$decodedData],
-					'cityId' => $companyCityId[$decodedData]
+					'isDefault' => $companyIsDefault[$jsonData],
+					'stateAbb' => $companyStateAbb[$jsonData],
+					'cityId' => $companyCityId[$jsonData]
 				)
 			);
 		}

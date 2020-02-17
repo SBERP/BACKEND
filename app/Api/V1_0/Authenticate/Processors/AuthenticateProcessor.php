@@ -10,7 +10,6 @@ use ERP\Core\Authenticate\Validations\AuthenticateValidate;
 use ERP\Api\V1_0\Authenticate\Transformers\AuthenticateTransformer;
 use ERP\Exceptions\ExceptionMessage;
 use ERP\Model\Authenticate\AuthenticateModel;
-use Carbon;
 /**
  * @author Reema Patel<reema.p@siliconbrain.in>
  */
@@ -80,15 +79,10 @@ class AuthenticateProcessor extends BaseProcessor
 			}
 			else
 			{
-
-				$userArray = json_decode($result,true);
-
 				$userId =  Array();
-				
 				$userId['userId'] = $validationResult['userId'];
-				
 				return $userId;
 			}
-		}
+		}		
     }
 }

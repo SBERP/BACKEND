@@ -30,7 +30,7 @@ class SalesReturnService
     /**
      * @param LedgerPersistable $persistable
      */
-    public function create(BillPersistable $persistable)
+    public function create(LedgerPersistable $persistable)
     {
 		return "create method of LedgerService";
 		

@@ -42,7 +42,6 @@ class EncodeAllData
 				'widthStatus' => $decodedJson[$decodedData]['width_status'],
 				'heightStatus' => $decodedJson[$decodedData]['height_status'],
 				'devideFactor' => $devideFactor,
-				'moduloFactor' => $decodedJson[$decodedData]['modulo_factor'],
 				'createdAt' => $getCreatedDate[$decodedData],
 				'updatedAt' => $getUpdatedDate[$decodedData]
 			);

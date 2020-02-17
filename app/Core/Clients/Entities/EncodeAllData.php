@@ -30,14 +30,6 @@ class EncodeAllData extends StateService
 		
 		$constantClass = new ConstantClass();
 		$constantArray = $constantClass->constantVariable();
-
-		$stateArray = array();
-		$cityArray = array();
-		$professionArray = array();
-		$encodeDataClass = new EncodeAllData();
-		$cityDetail = new CityDetail();
-		$professionService = new ProfessionService();
-		
 		for($decodedData=0;$decodedData<count($decodedJson);$decodedData++)
 		{
 			$createdAt[$decodedData] = $decodedJson[$decodedData]['created_at'];
@@ -56,14 +48,10 @@ class EncodeAllData extends StateService
 			$stateAbb[$decodedData] = $decodedJson[$decodedData]['state_abb'];
 			$cityId[$decodedData] = $decodedJson[$decodedData]['city_id'];
 			$professionIdArray[$decodedData] = $decodedJson[$decodedData]['profession_id'];
-			$closingBalance[$decodedData] = array_key_exists('closing_balance', $decodedJson[$decodedData]) ? $decodedJson[$decodedData]['closing_balance'] : [];
-			//get the state detail from database
 			
-			if (!isset($stateArray[$stateAbb[$decodedData]])) {
-				$stateArray[$stateAbb[$decodedData]] = $encodeDataClass->getStateData($stateAbb[$decodedData]);
-			}
-			$stateStatus[$decodedData] = $stateArray[$stateAbb[$decodedData]];
-
+			//get the state detail from database
+			$encodeDataClass = new EncodeAllData();
+			$stateStatus[$decodedData] = $encodeDataClass->getStateData($stateAbb[$decodedData]);
 			$stateDecodedJson[$decodedData] = json_decode($stateStatus[$decodedData],true);
 			$stateName[$decodedData]= $stateDecodedJson[$decodedData]['stateName'];
 			$stateIsDisplay[$decodedData]= $stateDecodedJson[$decodedData]['isDisplay'];
@@ -71,20 +59,12 @@ class EncodeAllData extends StateService
 			$stateUpdatedAt[$decodedData]= $stateDecodedJson[$decodedData]['updatedAt'];
 			
 			//get the city details from database
-			if (!isset($cityArray[$cityId[$decodedData]])) {
-				$cityArray[$cityId[$decodedData]] = $cityDetail->getCityDetail($cityId[$decodedData]);
-			}
-			
-			$getCityDetail[$decodedData] = $cityArray[$cityId[$decodedData]];
+			$cityDetail = new CityDetail();
+			$getCityDetail[$decodedData] = $cityDetail->getCityDetail($cityId[$decodedData]);
 			 
 			//get all profession details from database 
-			
-
-			if (!isset($professionArray[$professionIdArray[$decodedData]])) {
-				$professionArray[$professionIdArray[$decodedData]] = $professionService->getProfessionData($professionIdArray[$decodedData]);
-			}
-			$professionDetail[$decodedData] = $professionArray[$professionIdArray[$decodedData]];
-
+			$professionService = new ProfessionService();
+			$professionDetail[$decodedData] = $professionService->getProfessionData($professionIdArray[$decodedData]);
 			
 			//date format conversion
 			$convertedCreatedDate[$decodedData] = Carbon\Carbon::createFromFormat('Y-m-d H:i:s', $createdAt[$decodedData])->format('d-m-Y');
@@ -222,9 +202,9 @@ class EncodeAllData extends StateService
 				'city' => $getCityDetail[$jsonData]
 			);
 			$data[$jsonData]['file'] = $documentArrayData[$jsonData];
-			$data[$jsonData]['closingBalance'] = $closingBalance[$jsonData];
 		}
 		ini_set('memory_limit', '256M');
+		
 		return json_encode($data);
 	}
 }

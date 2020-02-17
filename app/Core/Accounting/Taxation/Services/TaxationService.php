@@ -178,7 +178,7 @@ class TaxationService extends AbstractService
 		else
 		{
 			$encoded = new EncodeTaxationData();
-			$encodeAllData = $encoded->getGstr2Data($taxationData, $companyId);
+			$encodeAllData = $encoded->getGstr2Data($taxationData);
 			return $encodeAllData;
 			
 		}
@@ -218,15 +218,29 @@ class TaxationService extends AbstractService
 	{
 		//get Sales Tax data
 		$saleTaxModel = new TaxationModel();
-		$outwardSupplies = $saleTaxModel->getOutwardSupplies($companyId,$request->header());
+		$saleTaxData = $saleTaxModel->getSaleTaxData($companyId,$request->header());
+
+		//get Stock-detail data
+		$taxationModel = new TaxationModel();
+		$stockDetailData = $taxationModel->getStockDetailData($companyId,$request->header());
 
 		//get Purchase Tax data
 		$purchaseTaxModel = new TaxationModel();
-		$inwardSupplies = $purchaseTaxModel->getInwardSupplies($companyId,$request->header());
+		$purchaseTaxData = $purchaseTaxModel->getPurchaseTaxData($companyId,$request->header());
 		
-		$encoded = new EncodeTaxationData();
-		$encodeAllData = $encoded->getGSTR3BData($inwardSupplies, $outwardSupplies, $companyId, $request->header());
-		return $encodeAllData;
+		//get exception message
+		$exception = new ExceptionMessage();
+		$exceptionArray = $exception->messageArrays();
+		if(strcmp($saleTaxData,$exceptionArray['204'])==0)
+		{
+			return $saleTaxData;
+		}
+		else
+		{
+			$encoded = new EncodeTaxationData();
+			$encodeAllData = $encoded->getGSTR3BData($saleTaxData,$stockDetailData,$purchaseTaxData,$request->header());
+			return $encodeAllData;
+		}
 	}
 
 	/**

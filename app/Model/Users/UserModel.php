@@ -107,16 +107,13 @@ class UserModel extends Model
 	 * get All data 
 	 * returns the status
 	*/
-	public function getAllData(Request $request,$emailId = '')
+	public function getAllData(Request $request)
 	{	
 		//database selection
 		$database = "";
 		$constantDatabase = new ConstantClass();
 		$databaseName = $constantDatabase->constantDatabase();
-		$extendedQuery = "and user_type != 'superadmin'";
-		if ($emailId != '') {
-			$extendedQuery = "and email_id = '$emailId'";
-		}
+		
 		if(array_key_exists('companyid',$request->header()) || array_key_exists('branchid',$request->header()))
 		{
 			$userArray = new UserArray();
@@ -147,7 +144,7 @@ class UserModel extends Model
 			default_company_id,
 			created_at,
 			updated_at
-			from user_mst where ".$querySet." deleted_at='0000-00-00 00:00:00' $extendedQuery");
+			from user_mst where ".$querySet." deleted_at='0000-00-00 00:00:00' ");
 			DB::commit();
 		}
 		else
@@ -170,7 +167,7 @@ class UserModel extends Model
 			default_company_id,
 			created_at,
 			updated_at
-			from user_mst where deleted_at='0000-00-00 00:00:00' $extendedQuery");
+			from user_mst where deleted_at='0000-00-00 00:00:00'");
 			DB::commit();
 		}
 		//get exception message

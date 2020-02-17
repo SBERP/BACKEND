@@ -88,7 +88,6 @@ class RouteServiceProvider extends ServiceProvider
 				$routeArray['clients'] = "Client";
 				$routeArray['bills'] = "Bill";
 				$routeArray['sales-returns'] = "SalesReturn";
-				$routeArray['purchase-returns'] = "PurchaseReturn";
 				$routeArray['trial-balance'] = "TrialBalance";
 				$routeArray['balance-sheet'] = "BalanceSheet";
 				$routeArray['profit-loss'] = "ProfitLoss";
@@ -109,9 +108,6 @@ class RouteServiceProvider extends ServiceProvider
 				$routeArray['measurement-units'] = "Measurement";
 				$routeArray['settings'] = "Setting";
 				$routeArray['merge'] = "Merge";
-				$routeArray['report-builder'] = "ReportBuilder";
-				$routeArray['credit-notes'] = "CreditNote";
-				$routeArray['debit-notes'] = "DebitNote";
 				$routeName = "";
 				
 				foreach($routeArray as $key => $value)
