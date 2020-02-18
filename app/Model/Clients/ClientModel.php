@@ -345,7 +345,11 @@ class ClientModel extends Model
 			client_id,
 			birth_date,
 			anniversary_date,
-			other_date
+			other_date,
+			IFNULL(architect_id,'') as architect_id,
+			IFNULL(architect_commission,'') as architect_commission,
+			IFNULL(carpenter_id,'') as carpenter_id,
+			IFNULL(carpenter_commission,'') as carpenter_commission
 			from client_mst 
 			where deleted_at='0000-00-00 00:00:00'");
 			DB::commit();
@@ -404,6 +408,10 @@ class ClientModel extends Model
 		credit_limit,
 		credit_days,
 		gst,
+		IFNULL(architect_id,'') as architect_id,
+		IFNULL(architect_commission,'') as architect_commission,
+		IFNULL(carpenter_id,'') as carpenter_id,
+		IFNULL(carpenter_commission,'') as carpenter_commission,
 		is_display,
 		created_at,
 		updated_at,

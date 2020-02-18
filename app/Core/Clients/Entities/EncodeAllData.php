@@ -42,6 +42,10 @@ class EncodeAllData extends StateService
 			$emailId[$decodedData] = $decodedJson[$decodedData]['email_id'];
 			$address1[$decodedData] = $decodedJson[$decodedData]['address1'];
 			$gst[$decodedData] = $decodedJson[$decodedData]['gst'];
+			$architectId[$decodedData] = $decodedJson[$decodedData]['architect_id'];
+			$architectCommission[$decodedData] = $decodedJson[$decodedData]['architect_commission'];
+			$carpenterId[$decodedData] = $decodedJson[$decodedData]['carpenter_id'];
+			$carpenterCommission[$decodedData] = $decodedJson[$decodedData]['carpenter_commission'];
 			$creditLimit[$decodedData] = $decodedJson[$decodedData]['credit_limit'];
 			$creditDays[$decodedData] = $decodedJson[$decodedData]['credit_days'];
 			$isDisplay[$decodedData] = $decodedJson[$decodedData]['is_display'];
@@ -172,6 +176,10 @@ class EncodeAllData extends StateService
 				'contactNo' => $contactNo[$jsonData],
 				'contactNo1' => $contactNo1[$jsonData],
 				'gst' => $gst[$jsonData],
+				'architectId' => $architectId[$jsonData],
+				'architectCommission' => $architectCommission[$jsonData],
+				'carpenterId' => $carpenterId[$jsonData],
+				'carpenterCommission' => $carpenterCommission[$jsonData],
 				'emailId' => $emailId[$jsonData],
 				'address1' => $address1[$jsonData],
 				'isDisplay' => $isDisplay[$jsonData],
