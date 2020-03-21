@@ -51,7 +51,7 @@ class ProductCategoryController extends BaseController implements ContainerInter
     {
 		//Authentication
 		$tokenAuthentication = new TokenAuthentication();
-		$authenticationResult = $tokenAuthentication->authenticate($request->header());
+		$authenticationResult = $tokenAuthentication->authenticate($request->header(),'brand.add');
 		
 		//get constant array
 		$constantClass = new ConstantClass();
@@ -103,7 +103,7 @@ class ProductCategoryController extends BaseController implements ContainerInter
     {
 		//Authentication
 		$tokenAuthentication = new TokenAuthentication();
-		$authenticationResult = $tokenAuthentication->authenticate($request->header());
+		$authenticationResult = $tokenAuthentication->authenticate($request->header(),'brand.add');
 		
 		//get constant array
 		$constantClass = new ConstantClass();
@@ -221,7 +221,7 @@ class ProductCategoryController extends BaseController implements ContainerInter
     {  
 		//Authentication
 		$tokenAuthentication = new TokenAuthentication();
-		$authenticationResult = $tokenAuthentication->authenticate($request->header());
+		$authenticationResult = $tokenAuthentication->authenticate($request->header(),'brand.edit');
 		
 		//get constant array
 		$constantClass = new ConstantClass();
@@ -271,7 +271,7 @@ class ProductCategoryController extends BaseController implements ContainerInter
     {
 		//Authentication
 		$tokenAuthentication = new TokenAuthentication();
-		$authenticationResult = $tokenAuthentication->authenticate($request->header());
+		$authenticationResult = $tokenAuthentication->authenticate($request->header(),'brand.delete');
 		
 		//get constant array
 		$constantClass = new ConstantClass();

@@ -29,6 +29,7 @@ class UserTransformer
 		$branchId = $request->input('branchId'); 
 		$permissionArray = $request->input('permissionArray'); 
 		$defaultCompanyId = $request->input('defaultCompanyId'); 
+		$roleId = $request->input('roleId');
 		
 		//trim an input
 		$tUserName = trim($userName);
@@ -44,6 +45,7 @@ class UserTransformer
 		$tBranchId = trim($branchId);
 		$tPermissionArray = trim($permissionArray);
 		$tDefaultCompanyId = trim($defaultCompanyId);
+		$tRoleId = trim($roleId);
 		
 		//check enum user type
 		$userType = new UserTypeEnum();
@@ -75,6 +77,7 @@ class UserTransformer
 			$data['branch_id'] = $tBranchId;
 			$data['permission_array'] = $tPermissionArray;
 			$data['default_company_id'] = $tDefaultCompanyId;
+			$data['role_id'] = $tRoleId;
 			return $data;
 		}
 		else

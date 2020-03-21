@@ -22,11 +22,23 @@ class Commission implements RouteRegistrarInterface
 		Route::group(['as' => 'get'], function ()
 		{
 			Route::get('Users/Commissions/Commission/item-wise/{commissionId?}', 'Users\Commissions\Controllers\CommissionController@getItemwiseData');
-			Route::get('Users/Commissions/Commission/{userId?}', 'Users\Commissions\Controllers\CommissionController@getData');
+			/***************************Added after commission update for categorywise and brandWise
+			****************************on Date: 26-02-2020*******************************************/
+			// Route::get('Users/Commissions/Commission/{userId?}', 'Users\Commissions\Controllers\CommissionController@getData');
+			Route::get('Users/Commissions/Commission/{userId?}', 'Users\Commissions\Controllers\CommissionController@getDataValue');
+			/***************************Added after commission update for categorywise and brandWise
+			****************************on Date: 26-02-2020*******************************************/;
+			Route::get('Users/Commissions/Commission/report/{userId}', 'Users\Commissions\Controllers\CommissionController@getReportData');
+
 		});
 		// insert data post request
 		Route::post('Users/Commissions/Commission/item-wise/{commissionId?}', 'Users\Commissions\Controllers\CommissionController@storeItemwise');
-		Route::post('Users/Commissions/Commission/{userId}', 'Users\Commissions\Controllers\CommissionController@storeOrUpdate');
+		/***************************Added after commission update for categorywise and brandWise
+		****************************on Date: 26-02-2020*******************************************/
+		// Route::post('Users/Commissions/Commission/{userId}', 'Users\Commissions\Controllers\CommissionController@storeOrUpdate');
+		Route::post('Users/Commissions/Commission/{userId}', 'Users\Commissions\Controllers\CommissionController@storeOrUpdateValues');
+		/***************************Added after commission update for categorywise and brandWise
+		****************************on Date: 26-02-2020*******************************************/
 		// update data post request
 		// Route::post('Users/Commission/{userId}', 'Users\Commissions\Controllers\CommissionController@update');
 		Route::delete('Users/Commissions/Commission/item-wise/{commissionId}', 'Users\Commissions\Controllers\CommissionController@destroyItemwise');

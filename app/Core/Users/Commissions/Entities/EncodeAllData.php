@@ -7,7 +7,7 @@ use Carbon;
  *
  * @author Hiren Faldu<hiren.f@siliconbrain.in>
  */
-class EncodeAllData extends CompanyService
+class EncodeAllData// extends CompanyService
 {
 	public function getEncodedAllData($status)
 	{

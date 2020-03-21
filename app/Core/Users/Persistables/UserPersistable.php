@@ -10,6 +10,9 @@ use ERP\Core\Users\Properties\AddressPropertyTrait;
 use ERP\Core\Users\Properties\UserTypePropertyTrait;
 use ERP\Core\Users\Properties\PermissionArrayTrait;
 use ERP\Core\Users\Properties\DefaultCompanyIdPropertyTrait;
+use ERP\Core\Users\Properties\RoleIdPropertyTrait;
+// use ERP\Core\Users\Properties\RoleNamePropertyTrait;
+
 use ERP\Core\Companies\Properties\PincodePropertyTrait;
 use ERP\Core\Companies\Properties\CompanyIdPropertyTrait;
 use ERP\Core\Branches\Properties\BranchIdPropertyTrait;
@@ -17,6 +20,8 @@ use ERP\Core\Cities\Properties\CityIdPropertyTrait;
 use ERP\Core\States\Properties\StateAbbPropertyTrait;
 use ERP\Core\Shared\Properties\NamePropertyTrait;
 use ERP\Core\Shared\Properties\KeyPropertyTrait;
+
+
 /**
  * @author Reema Patel<reema.p@siliconbrain.in>
  */
@@ -29,6 +34,9 @@ class UserPersistable
     use AddressPropertyTrait;
     use PincodePropertyTrait;
     use CompanyIdPropertyTrait;
+    use RoleIdPropertyTrait;
+    // use RoleNamePropertyTrait;
+
     use BranchIdPropertyTrait;
     use CityIdPropertyTrait;
     use StateAbbPropertyTrait;

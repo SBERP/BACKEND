@@ -5,6 +5,7 @@ use ERP\Core\Authenticate\Entities\Authenticate;
 use ERP\Core\Users\Services\UserService;
 use Carbon;
 use ERP\Entities\Constants\ConstantClass;
+use ERP\Model\Users\UserModel;
 /**
  * @author Reema Patel<reema.p@siliconbrain.in>
  */
@@ -45,6 +46,14 @@ class EncodeData extends UserService
 			$authenticate->setUpdated_at($convertedUpdatedDate);
 			$getUpdatedDate = $authenticate->getUpdated_at();
 		}
+
+		$rolePermissions = [];
+
+		if($userDecodedData->roleId>0)
+		{
+			$userModel = new UserModel();
+			$rolePermissions = json_decode($userModel->getPermissions($userDecodedData->roleId));
+		}
 		
 		//set all data into json array
 		$data = array();
@@ -61,6 +70,9 @@ class EncodeData extends UserService
 			'address' => $userDecodedData->address,
 			'password' => $userDecodedData->password,
 			'pincode' => $userDecodedData->pincode,
+			'roleId' => $userDecodedData->roleId,
+			'roleName' => $userDecodedData->roleName,
+			'rolePermissions' => $rolePermissions,
 			'permissionArray' => $userDecodedData->permissionArray,
 			'defaultCompanyId' => $userDecodedData->defaultCompanyId,
 			'createdAt' => $userDecodedData->createdAt,

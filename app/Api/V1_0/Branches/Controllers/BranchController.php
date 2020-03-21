@@ -50,7 +50,7 @@ class BranchController extends BaseController implements ContainerInterface
     {
 		//Authentication
 		$tokenAuthentication = new TokenAuthentication();
-		$authenticationResult = $tokenAuthentication->authenticate($request->header());
+		$authenticationResult = $tokenAuthentication->authenticate($request->header(),'branch.add');
 		
 		//get constant array
 		$constantClass = new ConstantClass();
@@ -169,7 +169,7 @@ class BranchController extends BaseController implements ContainerInterface
     {    
 		//Authentication
 		$tokenAuthentication = new TokenAuthentication();
-		$authenticationResult = $tokenAuthentication->authenticate($request->header());
+		$authenticationResult = $tokenAuthentication->authenticate($request->header(),'branch.edit');
 		
 		//get constant array
 		$constantClass = new ConstantClass();
@@ -221,7 +221,7 @@ class BranchController extends BaseController implements ContainerInterface
     {
 		//Authentication
 		$tokenAuthentication = new TokenAuthentication();
-		$authenticationResult = $tokenAuthentication->authenticate($request->header());
+		$authenticationResult = $tokenAuthentication->authenticate($request->header(),'branch.delete');
 		
 		//get constant array
 		$constantClass = new ConstantClass();

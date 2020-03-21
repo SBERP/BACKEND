@@ -48,7 +48,7 @@ class CommissionController extends BaseController implements ContainerInterface
 	*/
 	public function storeOrUpdate(Request $request,$userId)
     {
-    	//Authentication
+    	// Authentication
 		$tokenAuthentication = new TokenAuthentication();
 		$authenticationResult = $tokenAuthentication->authenticate($request->header());
 		
@@ -76,6 +76,7 @@ class CommissionController extends BaseController implements ContainerInterface
 				$commissionPersistable = new CommissionPersistable();
 				$commissionService= new CommissionService();
 				$commissionPersistable = $processor->createPersistable($this->request);
+				// return $commissionPersistable;
 				if($commissionPersistable[0][0]=='[')
 				{
 					return $commissionPersistable;
@@ -97,11 +98,85 @@ class CommissionController extends BaseController implements ContainerInterface
 			}
 		}
     }
+    /***************************Added after commission update for categorywise and brandWise
+	****************************on Date: 26-02-2020*******************************************/
+    public function storeOrUpdateValues(Request $request,$userId)
+    {
+    	// Authentication
+		$tokenAuthentication = new TokenAuthentication();
+		$authenticationResult = $tokenAuthentication->authenticate($request->header());
+		
+		//get exception message
+		$exception = new ExceptionMessage();
+		$exceptionArray = $exception->messageArrays();
+		
+		//get constant array
+		$constantClass = new ConstantClass();
+		$constantArray = $constantClass->constantVariable();
+		if(strcmp($constantArray['success'],$authenticationResult)==0)
+		{
+			//print_r($request->input('commissionType'));
+			if($request->input('commissionType')=='general')
+			{
+				$this->request = $request;
+				$requestMethod = $_SERVER['REQUEST_METHOD'];
+				// insert or update
+				if($requestMethod == 'POST')
+				{
+					$commissionModel = new CommissionModel();
+					$result = $commissionModel->getData($userId);
+					//get exception message
+					$exception = new ExceptionMessage();
+					$fileSizeArray = $exception->messageArrays();
+					// create or update staff commission
+					$processor = new CommissionProcessor();
+					$commissionPersistable = new CommissionPersistable();
+					$commissionService= new CommissionService();
+					$commissionPersistable = $processor->createPersistable($this->request);
+					// return $commissionPersistable;
+					if($commissionPersistable[0][0]=='[')
+					{
+						return $commissionPersistable;
+					}
+					else if(is_array($commissionPersistable))
+					{
+						// if (strcmp($result,$fileSizeArray['404'])==0) {
+							$status = $commissionService->insert($commissionPersistable);
+							return $status;
+						// }else{
+						// 	$status = $commissionService->update($commissionPersistable);
+						// 	return $status;
+						// }
+					}
+					else
+					{
+						return $commissionPersistable;
+					}
+				}
+			}
+			else
+			{
+				$this->request = $request;
+				$requestMethod = $_SERVER['REQUEST_METHOD'];
+				// insert or update
+				if($requestMethod == 'POST')
+				{
+					$commissionService= new CommissionService();
+					$status = $commissionService->insertUpdateValue($request->all());
+					// return $request->all();
+					return $status;
+				}
+			}
+
+		}
+    }
+    /***************************Added after commission update for categorywise and brandWise
+	****************************on Date: 26-02-2020*******************************************/
     public function storeItemwise(Request $request,$commissionId=null)
     {
     	//Authentication
 		$tokenAuthentication = new TokenAuthentication();
-		$authenticationResult = $tokenAuthentication->authenticate($request->header());
+		$authenticationResult = $tokenAuthentication->authenticate($request->header(),'setting.itemwise_commission.all');
 		
 		//get exception message
 		$exception = new ExceptionMessage();
@@ -229,11 +304,97 @@ class CommissionController extends BaseController implements ContainerInterface
 			return $authenticationResult;
 		}
 	}
+
+	/***************************Added after commission update for categorywise and brandWise
+	****************************on Date: 26-02-2020*******************************************/
+	public function getDataValue(Request $request,$userId=null)
+    {
+		//Authentication
+		$tokenAuthentication = new TokenAuthentication();
+		$authenticationResult = $tokenAuthentication->authenticate($request->header());
+		
+		//get constant array
+		$constantClass = new ConstantClass();
+		$constantArray = $constantClass->constantVariable();
+		
+		if(strcmp($constantArray['success'],$authenticationResult)==0)
+		{
+			if($userId==null)
+			{
+				$commissionService= new CommissionService();
+				$status = $commissionService->getAllCommissionData();
+				return $status;
+			}
+			else
+			{
+				$commissionService= new CommissionService();
+				$status = $commissionService->getAllCommissionDataValue($userId);
+				$status = json_decode($status);
+				if(count($status)>0)
+				{
+					if($status[0]->commissionType == "general")
+					{
+						return json_encode($status[0]);
+					}
+					foreach($status as $st)
+					{
+						foreach(json_decode($st->commissionFor) as $key=>$val)
+						{
+							$st->commissionFor=$key;
+							break;
+						}
+						// $st->commissionFor = json_decode($st->commissionFor);
+					}
+					return json_encode($status);
+				}
+				return json_encode($status);
+			}
+		}
+		else
+		{
+			return $authenticationResult;
+		}
+	}
+	/***************************Added after commission update for categorywise and brandWise
+	****************************on Date: 26-02-2020*******************************************/
+    /**
+     * get the specified resource.
+     * @param  int  $userId
+     */
+    public function getReportData(Request $request,$userId)
+    {
+		//Authentication
+		$tokenAuthentication = new TokenAuthentication();
+		$authenticationResult = $tokenAuthentication->authenticate($request->header());
+		
+		//get constant array
+		$constantClass = new ConstantClass();
+		$constantArray = $constantClass->constantVariable();
+		
+		if(strcmp($constantArray['success'],$authenticationResult)==0)
+		{
+			if (array_key_exists('companyid', $request->header())) 
+			{
+				$headerData = $request->header();
+				$commissionService= new CommissionService();
+				$status = $commissionService->getUserCommissionReport($userId,$headerData);
+				return $status;
+			}
+			else
+			{
+				return $exceptionArray['204'];
+			}
+		}
+		else
+		{
+			return $authenticationResult;
+		}
+	}
 	public function destroyItemwise(Request $request,$commissionId)
 	{
 		//Authentication
 		$tokenAuthentication = new TokenAuthentication();
-		$authenticationResult = $tokenAuthentication->authenticate($request->header());
+		$authenticationResult = $tokenAuthentication->authenticate($request->header(),'setting.itemwise_commission.all');
 		
 		//get exception message
 		$exception = new ExceptionMessage();

@@ -404,4 +404,76 @@ class AuthenticateModel extends Model
 			return $exceptionArray['404'];
 		}
 	}
+
+	public function checkPermission($headerData,$permission)
+	{
+
+		//database selection
+		$database = "";
+		$constantDatabase = new ConstantClass();
+		$databaseName = $constantDatabase->constantDatabase();
+		
+		//get exception message
+		$exception = new ExceptionMessage();
+		$exceptionArray = $exception->messageArrays();
+
+		$success = 0;
+
+		// DB::beginTransaction();
+		// $raw = DB::connection($databaseName)->select("select name from permissions where id in (select permission_id from role_permission where role_id in (select role_id from user_mst where user_id in (select user_id from active_session where token='".$headerData."')))");
+		// DB::commit();
+
+		DB::beginTransaction();
+		$raw = DB::connection($databaseName)->select("select role_id,user_id from user_mst where user_id in (select user_id from active_session where token='".$headerData."')");
+		DB::commit();
+
+		if(count($raw)==0)
+		{
+			return 0;
+		}
+		else if($raw[0]->role_id==0)
+		{
+			// $success = 1;
+			DB::beginTransaction();
+			$raw = DB::connection($databaseName)->statement("insert into activity_log (activity,module,user_id) values ('".explode('.', $permission)[1]."','".explode('.', $permission)[0]."',".$raw[0]->user_id.")");
+			DB::commit();
+			return 1;
+		}
+
+		$userId = $raw[0]->user_id;
+
+		DB::beginTransaction();
+		$raw = DB::connection($databaseName)->select("select name from permissions where id in (select permission_id from role_permission where role_id=".$raw[0]->role_id.")");
+		DB::commit();
+
+		// return json_encode($raw);
+		
+		foreach($raw as $data)
+		{
+			if($data->name==$permission)
+			{
+				$success = 1;
+				break;
+			}
+		}
+
+		if($success==1)
+		{
+			DB::beginTransaction();
+			$raw = DB::connection($databaseName)->statement("insert into activity_log (activity,module,user_id) values ('".explode('.', $permission)[1]."','".explode('.', $permission)[0]."',".$userId.")");
+			DB::commit();
+		}
+
+		// return json_encode($raw);
+		return $success;
+
+		// if(count($raw)!=0)
+		// {
+		// 	return $raw;
+		// }
+		// else
+		// {
+		// 	return $exceptionArray['token'];
+		// }
+	}
 }

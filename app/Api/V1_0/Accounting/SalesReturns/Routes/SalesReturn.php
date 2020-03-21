@@ -18,10 +18,9 @@ class SalesReturn implements RouteRegistrarInterface
     public function register(RegistrarInterface $Registrar)
     {
 		ini_set('memory_limit', '256M');
+		Route::get('Accounting/SalesReturns/SalesReturn/company/{companyId}','Accounting\SalesReturns\Controllers\SalesReturnController@getAll');
 		// get data
 		// insert data post request
 		Route::post('Accounting/SalesReturns/SalesReturn/{saleId}','Accounting\SalesReturns\Controllers\SalesReturnController@store');
 	}
 }
-
-

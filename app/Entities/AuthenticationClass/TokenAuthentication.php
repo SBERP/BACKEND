@@ -12,7 +12,7 @@ use ERP\Model\Authenticate\AuthenticateModel;
  */
 class TokenAuthentication extends AuthenticateService
 {
-    public function authenticate($headerData)
+    public function authenticate($headerData,$permission=null)
 	{
 		$tokenFlag=0;
 		$date="";
@@ -80,6 +80,13 @@ class TokenAuthentication extends AuthenticateService
 				// update updated_at time of token
 				$authenticationModel = new AuthenticateModel();
 				$authenticationResult = $authenticationModel->changeDate($headerData);
+				if($permission!=null)
+				{
+					$permissionResult = $authenticationModel->checkPermission($headerData['authenticationtoken'][0],$permission);
+					// return $permissionResult;
+					if($permissionResult==0)
+						return $exceptionArray['403'];
+				}
 				return $constantArray['success'];
 			}
 			else

@@ -47,6 +47,13 @@ class PurchaseBillTransformer
 			$entryDate = $splitedDate[2]."-".$splitedDate[1]."-".$splitedDate[0];
 			$purchaseBillArray['entryDate'] = $entryDate;
 		}
+		//Due date conversation
+		if(array_key_exists('dueDate',$request->input()))
+		{
+			$splitedDate = explode("-",trim($request->input()['dueDate']));
+			$dueDate = $splitedDate[2]."-".$splitedDate[1]."-".$splitedDate[0];
+			$purchaseBillArray['dueDate'] = $dueDate;
+		}
 		$purchaseBillArray['vendorId'] = array_key_exists('vendorId',$request->input())? trim($request->input()['vendorId']):0;
 		$purchaseBillArray['companyId'] = array_key_exists('companyId',$request->input())? trim($request->input()['companyId']):0;
 		$purchaseBillArray['billNumber'] = array_key_exists('billNumber',$request->input())? trim($request->input()['billNumber']):'';
@@ -98,6 +105,7 @@ class PurchaseBillTransformer
 			for($inventoryArray=0;$inventoryArray<$inventoryCount;$inventoryArray++)
 			{
 				$inventoryData[$inventoryArray] = $request->input()['inventory'][$inventoryArray];
+				$purchaseBillArray['inventory'][$inventoryArray] = array_except($inventoryData[$inventoryArray], ['itemizeDetail']);
 				$purchaseBillArray['inventory'][$inventoryArray]['productId'] = array_key_exists('productId',$inventoryData[$inventoryArray])? trim($inventoryData[$inventoryArray]['productId']) : 0;
 				$purchaseBillArray['inventory'][$inventoryArray]['productName'] = array_key_exists('productName',$inventoryData[$inventoryArray])? trim($inventoryData[$inventoryArray]['productName']) : 0;
 				$purchaseBillArray['inventory'][$inventoryArray]['measurementUnit'] = array_key_exists('measurementUnit',$inventoryData[$inventoryArray])? trim($inventoryData[$inventoryArray]['measurementUnit']) : 0;
@@ -125,6 +133,7 @@ class PurchaseBillTransformer
 				if (array_key_exists('itemizeDetail', $inventoryData[$inventoryArray])) {
 					$itemizeDtlJson = trim($inventoryData[$inventoryArray]['itemizeDetail']);
 					$itemizeDtlArray = json_decode($itemizeDtlJson);
+
 					if (count($itemizeDtlArray) > 0) {
 						$itemizeDtlArray = array_map(function($itemizeDtl){
 							$returnItemize = [];
@@ -183,6 +192,12 @@ class PurchaseBillTransformer
 				$splitedDate = explode("-",trim($input['entryDate']));
 				$entryDate = $splitedDate[2]."-".$splitedDate[1]."-".$splitedDate[0];
 				$purchaseBillArray['entryDate'] = $entryDate;
+			}
+			else if(strcmp(array_keys($input)[$arrayData],'dueDate')==0)
+			{
+				$splitedDate = explode("-",trim($input['dueDate']));
+				$dueDate = $splitedDate[2]."-".$splitedDate[1]."-".$splitedDate[0];
+				$purchaseBillArray['dueDate'] = $dueDate;
 			}
 			else
 			{
@@ -248,6 +263,7 @@ class PurchaseBillTransformer
 			for($inventoryArray=0;$inventoryArray<$inventoryCount;$inventoryArray++)
 			{
 				$inventoryData[$inventoryArray] = $request->input()['inventory'][$inventoryArray];
+				$purchaseBillArray['inventory'][$inventoryArray] = array_except($inventoryData[$inventoryArray],['itemizeDetail']);
 				$purchaseBillArray['inventory'][$inventoryArray]['productId'] = array_key_exists('productId',$inventoryData[$inventoryArray])? trim($inventoryData[$inventoryArray]['productId']) : 0;
 				$purchaseBillArray['inventory'][$inventoryArray]['productName'] = array_key_exists('productName',$inventoryData[$inventoryArray])? trim($inventoryData[$inventoryArray]['productName']) : 0;
 				$purchaseBillArray['inventory'][$inventoryArray]['measurementUnit'] = array_key_exists('measurementUnit',$inventoryData[$inventoryArray])? trim($inventoryData[$inventoryArray]['measurementUnit']) : 0;

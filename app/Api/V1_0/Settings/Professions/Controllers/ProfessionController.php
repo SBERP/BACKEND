@@ -50,7 +50,7 @@ class ProfessionController extends BaseController implements ContainerInterface
     {
 		//Authentication
 		$tokenAuthentication = new TokenAuthentication();
-		$authenticationResult = $tokenAuthentication->authenticate($request->header());
+		$authenticationResult = $tokenAuthentication->authenticate($request->header(),'setting.client_profession.all');
 		
 		//get constant array
 		$constantClass = new ConstantClass();
@@ -132,7 +132,7 @@ class ProfessionController extends BaseController implements ContainerInterface
     {
 		//Authentication
 		$tokenAuthentication = new TokenAuthentication();
-		$authenticationResult = $tokenAuthentication->authenticate($request->header());
+		$authenticationResult = $tokenAuthentication->authenticate($request->header(),'setting.client_profession.all');
 		
 		//get constant array
 		$constantClass = new ConstantClass();
@@ -184,7 +184,7 @@ class ProfessionController extends BaseController implements ContainerInterface
     {
 		//Authentication
 		$tokenAuthentication = new TokenAuthentication();
-		$authenticationResult = $tokenAuthentication->authenticate($request->header());
+		$authenticationResult = $tokenAuthentication->authenticate($request->header(),'setting.client_profession.all');
 		
 		//get constant array
 		$constantClass = new ConstantClass();

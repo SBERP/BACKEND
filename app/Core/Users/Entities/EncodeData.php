@@ -31,6 +31,8 @@ class EncodeData extends StateService
 		$stateAbb= $decodedJson[0]['state_abb'];
 		$companyId= $decodedJson[0]['company_id'];
 		$branchId= $decodedJson[0]['branch_id'];
+		$roleId= $decodedJson[0]['role_id'];
+		$roleName= $decodedJson[0]['role_name'];
 		$permissionArray= json_decode($decodedJson[0]['permission_array']);
 		$defaultCompanyId= $decodedJson[0]['default_company_id'];
 		
@@ -79,7 +81,9 @@ class EncodeData extends StateService
 		$data['emailId'] = $emailId;
 		$data['address'] = $address;	
 		$data['password'] = $decodedPassword;	
-		$data['pincode'] = $pincode;	
+		$data['pincode'] = $pincode;
+		$data['roleId'] = $roleId;
+		$data['roleName'] = $roleName;	
 		$data['permissionArray'] = $permissionArray;	
 		$data['defaultCompanyId'] = $defaultCompanyId;	
 		$data['createdAt'] = $getCreatedDate;	

@@ -54,7 +54,7 @@ class ProductController extends BaseController implements ContainerInterface
     {
 		//Authentication
 		$tokenAuthentication = new TokenAuthentication();
-		$authenticationResult = $tokenAuthentication->authenticate($request->header());
+		$authenticationResult = $tokenAuthentication->authenticate($request->header(),'product.add');
 		
 		//get constant array
 		$constantClass = new ConstantClass();
@@ -238,6 +238,17 @@ class ProductController extends BaseController implements ContainerInterface
 			return $authenticationResult;
 		}
 	}
+
+	public function getClientData(Request $request,$cid)
+    {
+		//get constant array
+		$constantClass = new ConstantClass();
+		$constantArray = $constantClass->constantVariable();
+
+		$productService= new ProductService();
+		$status = $productService->getAllClientProductData($cid);
+		return $status;
+    }
 	
 	/**
      * get the specified resource.
@@ -612,7 +623,7 @@ class ProductController extends BaseController implements ContainerInterface
 
     	//Authentication
 		$tokenAuthentication = new TokenAuthentication();
-		$authenticationResult = $tokenAuthentication->authenticate($request->header());
+		$authenticationResult = $tokenAuthentication->authenticate($request->header(),'product.edit');
 		
 		//get constant array
 		$constantClass = new ConstantClass();
@@ -663,7 +674,7 @@ class ProductController extends BaseController implements ContainerInterface
     {   
     	//Authentication
 		$tokenAuthentication = new TokenAuthentication();
-		$authenticationResult = $tokenAuthentication->authenticate($request->header());
+		$authenticationResult = $tokenAuthentication->authenticate($request->header(),'product.edit');
 		
 		//get constant array
 		$constantClass = new ConstantClass();
@@ -706,7 +717,7 @@ class ProductController extends BaseController implements ContainerInterface
     {
 		//Authentication
 		$tokenAuthentication = new TokenAuthentication();
-		$authenticationResult = $tokenAuthentication->authenticate($request->header());
+		$authenticationResult = $tokenAuthentication->authenticate($request->header(),'product.delete');
 		
 		//get constant array
 		$constantClass = new ConstantClass();

@@ -62,7 +62,17 @@ class EncodeTransactionAllData extends LedgerService
 
 				$jfId[$decodedData] = $decodedJson[$decodedData]['jf_id'];
 
+				$saleId[$decodedData] = $decodedJson[$decodedData]['sale_id'];
+
+				$invoiceNumber[$decodedData] = $decodedJson[$decodedData]['invoice_number'];
+
+				$purchaseId[$decodedData] = $decodedJson[$decodedData]['purchase_id'];
+
+				$billNumber[$decodedData] = $decodedJson[$decodedData]['bill_number'];
+
 				$ledgersId[$decodedData] = $decodedJson[$decodedData]['ledger_id'];
+
+				$closingBalance[$decodedData] = $decodedJson[$decodedData]['closingBalance'];
 
 				$openingBalance[$decodedData] = $decodedJson[$decodedData]['openingBalance'];
 
@@ -166,7 +176,17 @@ class EncodeTransactionAllData extends LedgerService
 
 				$jfId[$decodedData] = $decodedJson[$decodedData]['jf_id'];
 
+				$saleId[$decodedData] = $decodedJson[$decodedData]['sale_id'];
+
+				$invoiceNumber[$decodedData] = $decodedJson['invoice_number'];
+
+				$purchaseId[$decodedData] = $decodedJson[$decodedData]['purchase_id'];
+
+				$billNumber[$decodedData] = $decodedJson[$decodedData]['bill_number'];
+
 				$ledgersId[$decodedData] = $decodedJson[$decodedData]['ledger_id'];
+
+				$closingBalance[$decodedData] = $decodedJson[$decodedData]['closingBalance'];
 
 				$openingBalance[$decodedData] = $decodedJson[$decodedData]['openingBalance'];
 
@@ -273,9 +293,19 @@ class EncodeTransactionAllData extends LedgerService
 
 				'jfId' => $jfId[$jsonData],
 
+				'saleId' => $saleId[$jsonData],
+
+				'invoiceNumber' => $invoiceNumber[$jsonData],
+
+				'purchaseId' => $purchaseId[$jsonData],
+
+				'billNumber' => $billNumber[$jsonData],
+
 				'createdAt' => $getCreatedDate[$jsonData],
 
 				'updatedAt' => $getUpdatedDate[$jsonData],
+
+				'closingBalance' => $closingBalance[$jsonData],
 
 				'openingBalance' => $openingBalance[$jsonData],
 

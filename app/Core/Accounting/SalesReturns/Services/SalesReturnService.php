@@ -2,6 +2,7 @@
 namespace ERP\Core\Accounting\SalesReturns\Services;
 
 use ERP\Core\Accounting\Bills\Persistables\BillPersistable;
+use ERP\Core\Accounting\Bills\Entities\EncodeAllData;
 use ERP\Exceptions\ExceptionMessage;
 use ERP\Http\Requests;
 use Illuminate\Http\Request;
@@ -30,7 +31,7 @@ class SalesReturnService
     /**
      * @param LedgerPersistable $persistable
      */
-    public function create(LedgerPersistable $persistable)
+    public function create(BillPersistable $persistable)
     {
 		return "create method of LedgerService";
 		
@@ -64,6 +65,31 @@ class SalesReturnService
 			$status = $salesReturnModel->insertData($salesReturnArray,$requestInput);
 			//get exception message
 			return $status;
+		}
+	}
+	public function getAll() #done
+	{
+		$data = func_get_arg(0);
+		$companyId = func_get_arg(1);
+		
+		//get exception message
+		$exception = new ExceptionMessage();
+		$exceptionArray = $exception->messageArrays();
+			
+		//data pass to the model object for getData
+		$salesReturnModel = new SalesReturnModel();
+		// $billModel = new BillModel();
+		$salesReturnResult = $salesReturnModel->getAll($companyId,$data);
+		return $salesReturnResult;
+		if(strcmp($salesReturnResult,$exceptionArray['404'])==0)
+		{
+			return $salesReturnResult;
+		}
+		else
+		{
+			$encodeAllData = new EncodeAllData();
+			$encodingResult = $encodeAllData->getEncodedAllData($salesReturnResult);
+			return $encodingResult;
 		}
 	}
 }

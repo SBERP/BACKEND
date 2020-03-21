@@ -44,6 +44,12 @@ class EncodeData extends StateService
 		$isDisplay= $decodedJson[0]['is_display'];
 		$stateAbb= $decodedJson[0]['state_abb'];
 		$cityId= $decodedJson[0]['city_id'];
+		$closingBalance = array_key_exists('closing_balance', $decodedJson[0]) ? $decodedJson[0]['closing_balance'] : [];
+		$carpenterId= $decodedJson[0]['carpenter_id'];
+		$carpenterCommission= $decodedJson[0]['carpenter_commission'];
+		$architectId= $decodedJson[0]['architect_id'];
+		$architectCommission= $decodedJson[0]['architect_commission'];
+			
 		// get the state details from database
 		$encodeStateDataClass = new EncodeData();
 		$stateStatus = $encodeStateDataClass->getStateData($stateAbb);
@@ -95,6 +101,10 @@ class EncodeData extends StateService
 		$data['otherDate'] = $otherDate;
 		$data['creditLimit'] = $creditLimit;
 		$data['creditDays'] = $creditDays;
+		$data['carpenterId'] = $carpenterId;
+		$data['carpenterCommission'] = $carpenterCommission;
+		$data['architectId'] = $architectId;
+		$data['architectCommission'] = $architectCommission;
 		$data['createdAt'] = $getCreatedDate;
 		$data['updatedAt'] = $getUpdatedDate;	
 		$data['state']= array(
@@ -179,6 +189,7 @@ class EncodeData extends StateService
 				);
 			}
 		}
+		$data['closingBalance'] = $closingBalance;
 		$encodeData = json_encode($data);
 		return $encodeData;
 	}

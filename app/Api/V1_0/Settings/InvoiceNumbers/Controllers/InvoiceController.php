@@ -50,7 +50,7 @@ class InvoiceController extends BaseController implements ContainerInterface
     {
 		//Authentication
 		$tokenAuthentication = new TokenAuthentication();
-		$authenticationResult = $tokenAuthentication->authenticate($request->header());
+		$authenticationResult = $tokenAuthentication->authenticate($request->header(),'invoiceno.add');
 		
 		//get constant array
 		$constantClass = new ConstantClass();
@@ -192,12 +192,12 @@ class InvoiceController extends BaseController implements ContainerInterface
      */
 	public function update(Request $request,$invoiceId)
     {    
-		if(strcmp($_SERVER['REQUEST_URI'],"/accounting/bills")==0 || strcmp($_SERVER['REQUEST_URI'],"/accounting/quotations")==0)
+		if(strcmp($_SERVER['REQUEST_URI'],"/accounting/bills")==0 || strcmp($_SERVER['REQUEST_URI'],"/accounting/quotations")==0 || strpos($_SERVER['REQUEST_URI'],"/accounting/quotations/convert")!==false)
 		{
 			$this->request = $request;
 			$processor = new InvoiceProcessor();
 			$invoicePersistable = new InvoicePersistable();		
-			$invoiceService= new InvoiceService();		
+			$invoiceService= new InvoiceService();
 			$invoiceModel = new InvoiceModel();
 			$result = $invoiceModel->getData($invoiceId);
 			

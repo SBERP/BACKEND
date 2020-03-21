@@ -49,7 +49,7 @@ class MeasurementController extends BaseController implements ContainerInterface
     {
     	//Authentication
 		$tokenAuthentication = new TokenAuthentication();
-		$authenticationResult = $tokenAuthentication->authenticate($request->header());
+		$authenticationResult = $tokenAuthentication->authenticate($request->header(),'setting.advance_measure.all');
 		
 		//get constant array
 		$constantClass = new ConstantClass();
@@ -130,7 +130,7 @@ class MeasurementController extends BaseController implements ContainerInterface
     {
 		//Authentication
 		$tokenAuthentication = new TokenAuthentication();
-		$authenticationResult = $tokenAuthentication->authenticate($request->header());
+		$authenticationResult = $tokenAuthentication->authenticate($request->header(),'setting.advance_measure.all');
 		
 		//get constant array
 		$constantClass = new ConstantClass();
@@ -184,7 +184,7 @@ class MeasurementController extends BaseController implements ContainerInterface
 
 		//Authentication
 		$tokenAuthentication = new TokenAuthentication();
-		$authenticationResult = $tokenAuthentication->authenticate($request->header());
+		$authenticationResult = $tokenAuthentication->authenticate($request->header(),'setting.advance_measure.all');
 		
 		//get constant array
 		$constantClass = new ConstantClass();

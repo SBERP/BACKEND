@@ -108,7 +108,7 @@ class ClientController extends BaseController implements ContainerInterface
 		{
 			//Authentication
 			$tokenAuthentication = new TokenAuthentication();
-			$authenticationResult = $tokenAuthentication->authenticate($request->header());
+			$authenticationResult = $tokenAuthentication->authenticate($request->header(),'client.add');
 			//get constant array
 			$constantClass = new ConstantClass();
 			$constantArray = $constantClass->constantVariable();
@@ -243,7 +243,7 @@ class ClientController extends BaseController implements ContainerInterface
 		{
 			//Authentication
 			$tokenAuthentication = new TokenAuthentication();
-			$authenticationResult = $tokenAuthentication->authenticate($request->header());
+			$authenticationResult = $tokenAuthentication->authenticate($request->header(),'client.edit');
 			
 			// get exception message
 			$exception = new ExceptionMessage();
@@ -333,6 +333,10 @@ class ClientController extends BaseController implements ContainerInterface
 					//contact-no exists
 					return $exceptionArray['contact'];
 				}
+			}
+			else
+			{
+				return $authenticationResult;
 			}
 		}
 	}

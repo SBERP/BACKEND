@@ -36,6 +36,12 @@ use ERP\Core\Accounting\Bills\Properties\PoNumberTrait;
 use ERP\Core\Accounting\Bills\Properties\ExpenseTrait;
 use ERP\Core\Accounting\Bills\Properties\ServiceDateTrait;
 use ERP\Core\Accounting\Bills\Properties\UserIdTrait;
+use ERP\Core\Accounting\Bills\Properties\ArchitectCommissionPropertyTrait;
+use ERP\Core\Accounting\Bills\Properties\CarpenterCommissionPropertyTrait;
+use ERP\Core\Products\Properties\CreatedByTrait;
+use ERP\Core\Products\Properties\UpdatedByTrait;
+
+use ERP\Core\Accounting\Bills\Properties\IsSalesOrderTrait;
 /**
  * @author Reema Patel<reema.p@siliconbrain.in>
  */
@@ -76,4 +82,10 @@ class BillPersistable
 	use PoNumberTrait;
 	use ExpenseTrait;
 	use ServiceDateTrait;
+	use ArchitectCommissionPropertyTrait;
+	use CarpenterCommissionPropertyTrait;
+	use CreatedByTrait;
+	use UpdatedByTrait;
+	
+	use IsSalesOrderTrait;
 }

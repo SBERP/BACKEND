@@ -22,6 +22,7 @@ class Product implements RouteRegistrarInterface
 		Route::group(['as' => 'get'], function ()
 		{
 			Route::get('Products/Product/{productId?}', 'Products\Controllers\ProductController@getData');
+			Route::get('Products/Product/client/{clientId}', 'Products\Controllers\ProductController@getClientData');
 			Route::get('Products/Product/{productId}/document', 'Products\Controllers\ProductController@getProductDocumentData');
 			Route::get('Products/Product/{productId}/quantity-pricing', 'Products\Controllers\ProductController@getProductQuantityPricingData');
 			Route::get('Products/Product/company/{companyId?}/branch/{branchId?}', 'Products\Controllers\ProductController@getAllProductData');

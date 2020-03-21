@@ -29,6 +29,7 @@ use ERP\Core\Settings\Properties\ProductMrpRequireStatusTrait;
 use ERP\Core\Settings\Properties\ProductMarginStatusTrait;
 use ERP\Core\Settings\Properties\ProductVariantStatusTrait;
 use ERP\Core\Settings\Properties\ProductMeasurementTypeTrait;
+use ERP\Core\Settings\Properties\ProductDeleteStatusTrait;
 
 use ERP\Core\Settings\Properties\ClientWorkNoStatusTrait;
 use ERP\Core\Settings\Properties\ClientAddressStatusTrait;
@@ -41,6 +42,7 @@ use ERP\Core\Settings\Properties\BillSalesmanStatusTrait;
 
 use ERP\Core\Settings\Properties\AdvanceSalesStatusTrait;
 use ERP\Core\Settings\Properties\AdvancePurchaseStatusTrait;
+use ERP\Core\Settings\Properties\AdvanceTaxReadOnlyStatusTrait;
 
 use ERP\Core\Settings\Properties\WebintegrationStatusTrait;
 use ERP\Core\Settings\Properties\WebintegrationUserIdTrait;
@@ -48,6 +50,11 @@ use ERP\Core\Settings\Properties\WebintegrationPasswordTrait;
 use ERP\Core\Settings\Properties\WebintegrationPushUrlTrait;
 
 use ERP\Core\Settings\Properties\InventoryItemizeStatusTrait;
+
+use ERP\Core\Settings\Properties\LanguageSettingTypeTrait;
+use ERP\Core\Settings\Properties\TaxationGstStatusTrait;
+
+use ERP\Core\Settings\Properties\WorkFlowQuotationStatusTrait;
 
 /**
  * @author Reema Patel<reema.p@siliconbrain.in>
@@ -91,9 +98,11 @@ class SettingPersistable
     use ProductMarginStatusTrait;
     use ProductVariantStatusTrait;
     use ProductMeasurementTypeTrait;
+    use ProductDeleteStatusTrait;
 
     use AdvanceSalesStatusTrait;
     use AdvancePurchaseStatusTrait;
+    use AdvanceTaxReadOnlyStatusTrait;
 
     use WebintegrationStatusTrait;
     use WebintegrationUserIdTrait;
@@ -101,4 +110,9 @@ class SettingPersistable
     use WebintegrationPushUrlTrait;
     
     use InventoryItemizeStatusTrait;
+    
+    use LanguageSettingTypeTrait;
+    use TaxationGstStatusTrait;
+    
+    use WorkFlowQuotationStatusTrait;
 }

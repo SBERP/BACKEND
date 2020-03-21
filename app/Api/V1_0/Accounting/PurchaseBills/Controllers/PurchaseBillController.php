@@ -57,7 +57,7 @@ class PurchaseBillController extends BaseController implements ContainerInterfac
     {
 		//Authentication
 		$tokenAuthentication = new TokenAuthentication();
-		$authenticationResult = $tokenAuthentication->authenticate($request->header());
+		$authenticationResult = $tokenAuthentication->authenticate($request->header(),'purchasebill.add');
 		//get constant array
 		$constantClass = new ConstantClass();
 		$constantArray = $constantClass->constantVariable();
@@ -107,7 +107,7 @@ class PurchaseBillController extends BaseController implements ContainerInterfac
 	{
 		//Authentication
 		$tokenAuthentication = new TokenAuthentication();
-		$authenticationResult = $tokenAuthentication->authenticate($request->header());
+		$authenticationResult = $tokenAuthentication->authenticate($request->header(),'purchasebill.edit');
 		//get constant array
 		$constantClass = new ConstantClass();
 		$constantArray = $constantClass->constantVariable();
@@ -210,6 +210,46 @@ class PurchaseBillController extends BaseController implements ContainerInterfac
 			return $authenticationResult;
 		}
 	}
+	public function getPurchaseBillMonthwise(Request $request)
+	{
+		//Authentication
+		$tokenAuthentication = new TokenAuthentication();
+		$authenticationResult = $tokenAuthentication->authenticate($request->header());
+		
+		// get constant array
+		$constantClass = new ConstantClass();
+		$constantArray = $constantClass->constantVariable();
+		if(strcmp($constantArray['success'],$authenticationResult)==0)
+		{
+			$purchaseBillService = new PurchaseBillService();
+			$status = $purchaseBillService->getPurchaseBillMonthwise();
+			return $status;
+		}
+		else
+		{
+			return $authenticationResult;
+		}
+	}
+	public function getPurchaseBillById(Request $request,$id)
+	{
+		//Authentication
+		$tokenAuthentication = new TokenAuthentication();
+		$authenticationResult = $tokenAuthentication->authenticate($request->header());
+		
+		// get constant array
+		$constantClass = new ConstantClass();
+		$constantArray = $constantClass->constantVariable();
+		if(strcmp($constantArray['success'],$authenticationResult)==0)
+		{
+			$purchaseBillService = new PurchaseBillService();
+			$status = $purchaseBillService->getPurchaseBillById($id);
+			return $status;
+		}
+		else
+		{
+			return $authenticationResult;
+		}
+	}
 	/**
 	 * get the purchase-bill data as per given parameter
 	 * @param  Request object[Request $request]
@@ -245,7 +285,7 @@ class PurchaseBillController extends BaseController implements ContainerInterfac
 	{
 		//Authentication
 		$tokenAuthentication = new TokenAuthentication();
-		$authenticationResult = $tokenAuthentication->authenticate($request->header());
+		$authenticationResult = $tokenAuthentication->authenticate($request->header(),'purchasebill.delete');
 		// get constant array
 		$constantClass = new ConstantClass();
 		$constantArray = $constantClass->constantVariable();

@@ -242,7 +242,8 @@ class JobFormProcessor extends BaseProcessor
 				{
 					return $processedData;
 				}
-				$clientId = json_decode($processedData)[0]->client_id;
+				// $clientId = json_decode($processedData)[0]->client_id;
+				$clientId = json_decode($processedData)->clientId;
 			}
 		}
 		$clientIdArray = array();

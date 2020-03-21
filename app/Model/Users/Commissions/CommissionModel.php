@@ -12,6 +12,50 @@ use ERP\Entities\Constants\ConstantClass;
 class CommissionModel extends Model
 {
 	protected $table = 'staff_commission_mst';
+
+	public function insertUpdateValue($request)
+	{
+		$mytime = Carbon\Carbon::now();
+		//database selection
+		$database = "";
+		$constantDatabase = new ConstantClass();
+		$databaseName = $constantDatabase->constantDatabase();
+
+		$requestData = json_decode($request['commissionFor']);
+		// print_r($requestData);
+		DB::beginTransaction();
+		$raw = DB::connection($databaseName)->statement("delete from staff_commission_mst where user_id = '".$request['userId']."'");
+		DB::commit();
+		foreach($requestData as $data)
+		{
+			// print_r($data->commissionCalOn);
+			// return $data;
+
+			// DB::beginTransaction();
+			// $raw = DB::connection($databaseName)->statement("insert into staff_commission_mst(user_id,commission_status,commission_rate,commission_rate_type,commission_type,commission_calc_on,commission_for,created_at) 
+			// values('".$request['userId']."','".$data->commissionStatus."','".$data->commissionRate."','".$data->commissionRateType."','".$request['commissionType']."','".$data->commissionCalOn."','{\"".$data->id."\":true}','".$mytime."')");
+			// DB::commit();
+			if($data->commissionRate != 0)
+			{
+				DB::beginTransaction();
+				$raw = DB::connection($databaseName)->statement("insert into staff_commission_mst(user_id,commission_status,commission_rate,commission_rate_type,commission_type,commission_calc_on,commission_for,created_at) 
+				values('".$request['userId']."','".$request['commissionStatus']."','".$data->commissionRate."','".$data->commissionRateType."','".$request['commissionType']."','".$data->commissionCalcOn."','{\"".$data->id."\":true}','".$mytime."')");
+				DB::commit();
+			}
+		}
+		
+		//get exception message
+		$exception = new ExceptionMessage();
+		$exceptionArray = $exception->messageArrays();
+		// if($raw==1)
+		// {
+			return $exceptionArray['200'];
+		// }
+		// else
+		// {
+		// 	return $exceptionArray['500'];
+		// }
+	}
 	/**
 	 * insert data 
 	 * @param  array
@@ -44,6 +88,14 @@ class CommissionModel extends Model
 				$keyName =$keyName.$getCommissionKey[$data].",";
 			}
 		}
+		/***************************Added after commission update for categorywise and brandWise
+		****************************on Date: 26-02-2020*******************************************/
+		DB::beginTransaction();
+		$raw = DB::connection($databaseName)->statement("delete from staff_commission_mst where user_id = '".$getCommissionData[1]."'");
+		DB::commit();
+		/***************************Added after commission update for categorywise and brandWise
+		****************************on Date: 26-02-2020*******************************************/
+
 		DB::beginTransaction();
 		$raw = DB::connection($databaseName)->statement("insert into staff_commission_mst(".$keyName.",created_at) 
 		values(".$commissionData.",'".$mytime."')");
@@ -304,6 +356,90 @@ class CommissionModel extends Model
 		}
 	}
 	
+	
+	/**
+	 * get data as per given user Id
+	 * @param $userId
+	 * returns the status
+	*/
+	public function getUserCommissionReport()
+	{		
+		$ledgerId = func_get_arg(0);
+		$userId = func_get_arg(1);
+		$headerData = func_get_arg(2);
+		//database selection
+		$database = "";
+		$constantDatabase = new ConstantClass();
+		$databaseName = $constantDatabase->constantDatabase();
+		$companyId = $headerData['companyid'][0];
+		// DB::beginTransaction();
+		// $raw = DB::connection($databaseName)->select("select 
+		// sales_bill.sale_id as saleId,
+		// sales_bill.invoice_number as invoiceNumber,
+		// sales_bill.total,
+		// sales_bill.advance,
+		// sales_bill.balance,
+		// sales_bill.sales_type as salesType,
+		// sales_bill.refund,
+		// DATE_FORMAT(sales_bill.entry_date, '%d-%m-%Y') as entryDate,
+		// sales_bill.client_id as clientId,
+		// sales_bill.user_id as userId,
+		// sales_bill.jf_id as jfId,
+		// ".$ledgerId."_ledger_dtl.".$ledgerId."_id as Id,
+		// ".$ledgerId."_ledger_dtl.amount as commissionAmount,
+		// ".$ledgerId."_ledger_dtl.amount_type as commissionAmountType
+		// from sales_bill
+		// JOIN ".$ledgerId."_ledger_dtl on ".$ledgerId."_ledger_dtl.jf_id = sales_bill.jf_id
+		// where sales_bill.user_id ='".$userId."' and 
+		// sales_bill.company_id='".$companyId."' and 
+		// sales_bill.is_draft='no' and 
+		// sales_bill.sales_type='whole_sales' and 
+		// sales_bill.is_salesorder='not' and 
+		// sales_bill.deleted_at='0000-00-00 00:00:00' and 
+		// ".$ledgerId."_ledger_dtl.deleted_at='0000-00-00 00:00:00'");
+		// DB::commit();
+
+		DB::beginTransaction();
+		$raw = DB::connection($databaseName)->select("select 
+		sales_bill.sale_id as saleId,
+		sales_bill.invoice_number as invoiceNumber,
+		sales_bill.total,
+		sales_bill.advance,
+		sales_bill.balance,
+		sales_bill.sales_type as salesType,
+		sales_bill.refund,
+		DATE_FORMAT(sales_bill.entry_date, '%d-%m-%Y') as entryDate,
+		sales_bill.client_id as clientId,
+		sales_bill.user_id as userId,
+		sales_bill.jf_id as jfId,
+		".$ledgerId."_ledger_dtl.".$ledgerId."_id as Id,
+		".$ledgerId."_ledger_dtl.amount as commissionAmount,
+		".$ledgerId."_ledger_dtl.amount_type as commissionAmountType
+		from sales_bill
+		JOIN ".$ledgerId."_ledger_dtl on ".$ledgerId."_ledger_dtl.jf_id = sales_bill.jf_id
+		where (sales_bill.carpenter_id ='".$userId."' or architect_id='".$userId."') and 
+		sales_bill.company_id='".$companyId."' and 
+		sales_bill.is_draft='no' and 
+		sales_bill.sales_type='whole_sales' and 
+		sales_bill.is_salesorder='not' and 
+		sales_bill.deleted_at='0000-00-00 00:00:00' and 
+		".$ledgerId."_ledger_dtl.deleted_at='0000-00-00 00:00:00'");
+		DB::commit();
+		
+		//get exception message
+		$exception = new ExceptionMessage();
+		$exceptionArray = $exception->messageArrays();
+		if(count($raw)==0)
+		{
+			return $exceptionArray['204'];
+		}
+		else
+		{
+			$enocodedData = json_encode($raw);
+			return $enocodedData;
+		}
+	}
+	
 
 	/**
 	 * get All data 
@@ -345,4 +481,45 @@ class CommissionModel extends Model
 			return $enocodedData;
 		}
 	}
+
+	/***************************Added after commission update for categorywise and brandWise
+	****************************on Date: 26-02-2020*******************************************/
+	public function getAllDataValue($userId)
+	{	
+		//database selection
+		$database = "";
+		$constantDatabase = new ConstantClass();
+		$databaseName = $constantDatabase->constantDatabase();
+		
+		DB::beginTransaction();		
+		$raw = DB::connection($databaseName)->select("select 
+		commission_id,
+		user_id,
+		commission_status,
+		commission_rate,
+		commission_rate_type,
+		commission_type,
+		commission_calc_on,
+		commission_for,
+		created_at,
+		updated_at
+		from staff_commission_mst 
+		where user_id='".$userId."' and deleted_at='0000-00-00 00:00:00'");
+		DB::commit();
+		
+		//get exception message
+		$exception = new ExceptionMessage();
+		$exceptionArray = $exception->messageArrays();
+		if(count($raw)==0)
+		{
+			return $exceptionArray['204'];
+		}
+		else
+		{
+			$enocodedData = json_encode($raw);
+			return $enocodedData;
+		}
+	}
+	/***************************Added after commission update for categorywise and brandWise
+	****************************on Date: 26-02-2020*******************************************/
 }

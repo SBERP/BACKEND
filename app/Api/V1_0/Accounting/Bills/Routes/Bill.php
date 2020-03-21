@@ -19,10 +19,13 @@ class Bill implements RouteRegistrarInterface
 		ini_set('memory_limit', '256M');
 		// get data
 		Route::get('Accounting/Bills/Bill/company/{companyId}', 'Accounting\Bills\Controllers\BillController@getData');
+		Route::get('Accounting/Bills/Bill/quotation/company/{companyId}', 'Accounting\Bills\Controllers\BillController@getQuotationData');
 		Route::get('Accounting/Bills/Bill', 'Accounting\Bills\Controllers\BillController@getPreviosNextData');
 		Route::get('Accounting/Bills/Bill/draft-bill/{companyId}', 'Accounting\Bills\Controllers\BillController@getDraftData');
 		Route::get('Accounting/Bills/Bill/bulk-print', 'Accounting\Bills\Controllers\BillController@getBulkPrintData');
+		Route::get('Accounting/Bills/Bill/monthwise','Accounting\Bills\Controllers\BillController@getBillMonthwise');
 		Route::get('Accounting/Bills/Bill/{jfId}', 'Accounting\Bills\Controllers\BillController@getBillByJfId');
+		Route::get('Accounting/Bills/Bill/byid/{saleId}', 'Accounting\Bills\Controllers\BillController@getBillById');
 		// insert data post request
 		Route::post('Accounting/Bills/Bill', 'Accounting\Bills\Controllers\BillController@store');
 		Route::post('Accounting/Bills/Bill/draft-bill', 'Accounting\Bills\Controllers\BillController@storeDraftData');
@@ -30,6 +33,8 @@ class Bill implements RouteRegistrarInterface
 		//update data post request
 		Route::post('Accounting/Bills/Bill/{saleId}','Accounting\Bills\Controllers\BillController@update');
 		Route::post('Accounting/Bills/Bill/{saleId}/payment', 'Accounting\Bills\Controllers\BillController@updateBillPayment');
+		// Update Status only
+		Route::post('Accounting/Bills/Bill/{saleId}/status', 'Accounting\Bills\Controllers\BillController@updateBillStatus');
 		
 		//delete
 		Route::delete('Accounting/Bills/Bill/{saleId}', 'Accounting\Bills\Controllers\BillController@destroy');

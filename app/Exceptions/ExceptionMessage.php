@@ -15,6 +15,7 @@ class ExceptionMessage
 		$msgArray['200'] = "200: OK";
 		$msgArray['204'] = "204: No Content";
 		$msgArray['404'] = "404: Not Found";
+		$msgArray['403'] = "403: Access Forbidden";
 		$msgArray['content'] = "content: not proper content"; //company-insert-isDisp&isDef-not proper
 		$msgArray['equal'] = "equal: credit-debit amount is not an equal";
 		$msgArray['stateAbb'] = "required: state-abb is required";
@@ -40,6 +41,7 @@ class ExceptionMessage
 		$msgArray['notForSale'] = "Not For Sale value is not proper(true/false)";
 		$msgArray['taxInclusive'] = "Tax Inclusive value is not proper(inclusive/Exclusive)";
 		$msgArray['invalidProductCode'] = "Enter Diffrenet product-name/color/size";
+		$msgArray['invalidAmount'] = "Total amount is invalid";
 		$msgArray['invalidCategoryName'] = "Brand-Name is invalid";
 		$msgArray['invalidGroupName'] = "Category-Name is invalid";
 		$msgArray['invalidBranchName'] = "Branch-Name is invalid";

@@ -63,14 +63,18 @@ class JournalController extends BaseController implements ContainerInterface
 		$exception = new ExceptionMessage();
 		$exceptionArray = $exception->messageArrays();
 		$RequestUri = explode("/", $_SERVER['REQUEST_URI']);
-		if(strcmp($RequestUri[1],"accounting")==0 && strcmp($RequestUri[2],"bills")==0 || strcmp($RequestUri[1],"accounting")==0 && strcmp($RequestUri[2],"purchase-bills")==0 || strcmp($RequestUri[1],"accounting")==0 && strcmp($RequestUri[2],"sales-returns")==0)
+		if(strcmp($RequestUri[1],"accounting")==0 && strcmp($RequestUri[2],"bills")==0 ||
+		strcmp($RequestUri[1],"accounting")==0 && strcmp($RequestUri[2],"purchase-bills")==0 ||
+		strcmp($RequestUri[1],"accounting")==0 && strcmp($RequestUri[2],"sales-returns")==0 ||
+		strcmp($RequestUri[1],"accounting")==0 && strcmp($RequestUri[2],"purchase-returns")==0 ||
+		strcmp($RequestUri[1],"accounting")==0 && strcmp($RequestUri[2],"quotations")==0 && strcmp($RequestUri[3], 'convert')==0 )
 		{
 		}
 		else
 		{
 			//Authentication
 			$tokenAuthentication = new TokenAuthentication();
-			$authenticationResult = $tokenAuthentication->authenticate($request->header());
+			$authenticationResult = $tokenAuthentication->authenticate($request->header(),'receipt.add');
 			
 			if(strcmp($constantArray['success'],$authenticationResult)!=0)
 			{
@@ -115,7 +119,7 @@ class JournalController extends BaseController implements ContainerInterface
 				$status = $journalService->insert($journalPersistable);
 				if(count($request->input())>4)
 				{
-					$productService= new ProductService();	
+					$productService= new ProductService();
 					$productPersistable = new ProductPersistable();
 					if(strcmp($request->header()['type'][0],$constantArray['sales'])==0)
 					{
@@ -156,6 +160,19 @@ class JournalController extends BaseController implements ContainerInterface
 						$inward = $constantArray['journalInward'];
 						$productProcessor = new ProductProcessor();
 						$productPersistable = $productProcessor->createPersistableInOutWard($this->request,$inward);
+						if(is_array($productPersistable))
+						{
+							$status = $productService->insertInOutward($productPersistable,$jfId,'');
+							return $status;
+						}
+						else
+						{
+							return $productPersistable;
+						}
+					} elseif(strcmp($request->header()['type'][0], $constantArray['purchaseReturnType'])==0) {
+						$outward = $constantArray['journalOutward'];
+						$productProcessor = new ProductProcessor();
+						$productPersistable = $productProcessor->createPersistableInOutWard($this->request,$outward);
 						if(is_array($productPersistable))
 						{
 							$status = $productService->insertInOutward($productPersistable,$jfId,'');
@@ -245,6 +262,8 @@ class JournalController extends BaseController implements ContainerInterface
     public function getSpecificData(Request $request,$companyId)
     {
 		//Authentication
+		$exception = new ExceptionMessage();
+		$exceptionArray = $exception->messageArrays();
 		$tokenAuthentication = new TokenAuthentication();
 		$authenticationResult = $tokenAuthentication->authenticate($request->header());
 		
@@ -304,6 +323,51 @@ class JournalController extends BaseController implements ContainerInterface
 				$journalModel = new JournalModel();
 				$status = $journalModel->getCurrentYearData($companyId);
 				return $status;
+			}
+		}
+		else
+		{
+			return $authenticationResult;
+		}
+	}
+	
+	/**
+     * get the specific data between given date or current year data
+     */
+    public function getTransactionData(Request $request,$companyId)
+    {
+		//Authentication
+		$tokenAuthentication = new TokenAuthentication();
+		$authenticationResult = $tokenAuthentication->authenticate($request->header());
+		
+		//get constant array
+		$constantClass = new ConstantClass();
+		$constantArray = $constantClass->constantVariable();
+		$exception = new ExceptionMessage();
+		$exceptionArray = $exception->messageArrays();
+		if(strcmp($constantArray['success'],$authenticationResult)==0)
+		{
+			if(array_key_exists($constantArray['fromDate'],$request->header()) && array_key_exists($constantArray['toDate'],$request->header()))
+			{
+				if(array_key_exists('journaltype',$request->header()))
+				{
+					$this->request = $request;
+					$processor = new JournalProcessor();
+					$journalPersistable = new JournalPersistable();
+					$journalPersistable = $processor->createPersistableData($this->request);
+					$journalService= new JournalService();
+					$status = $journalService->getJournalTrnDetail($journalPersistable,$companyId,$request->header()['journaltype'][0]);
+					return $status;
+				}
+				else
+				{
+					return $exceptionArray['content'];
+				}
+			}
+			//if date is not given..get the data of current year
+			else
+			{
+				return $exceptionArray['content'];
 			}
 		}
 		else
@@ -428,6 +492,18 @@ class JournalController extends BaseController implements ContainerInterface
 							$productArray['inventory'][$inventoryArray]['price']=$inputArray['inventory'][$inventoryArray]['price'];
 							$productArray['inventory'][$inventoryArray]['qty']=$inputArray['inventory'][$inventoryArray]['qty'];
 							$productArray['inventory'][$inventoryArray]['measurementUnit']=$inputArray['inventory'][$inventoryArray]['measurementUnit'];
+
+							if (array_key_exists('stockFt', $inputArray['inventory'][$inventoryArray]) &&
+								$inputArray['inventory'][$inventoryArray]['stockFt'] != 'undefined' &&
+								$inputArray['inventory'][$inventoryArray]['stockFt'] != 0 ) {
+								$productArray['inventory'][$inventoryArray]['stockFt'] = trim($inputArray['inventory'][$inventoryArray]['stockFt']);
+							}
+							if (array_key_exists('totalFt', $inputArray['inventory'][$inventoryArray]) &&
+								$inputArray['inventory'][$inventoryArray]['totalFt'] != 'undefined' &&
+								$inputArray['inventory'][$inventoryArray]['totalFt'] != 0 ){
+								$productArray['inventory'][$inventoryArray]['totalFt'] = trim($inputArray['inventory'][$inventoryArray]['totalFt']);
+
+							}
 						}
 					}
 					//journal data is available in sale/purchase for update
@@ -461,6 +537,7 @@ class JournalController extends BaseController implements ContainerInterface
 							{
 								$headerType = $constantArray['purchaseType'];
 							}
+
 							$status = $journalService->update($journalPersistable,$jfId,$headerType);
 							
 							//update data in product_transaction
@@ -596,7 +673,6 @@ class JournalController extends BaseController implements ContainerInterface
 				$journalArray = $this->request->input();
 				//journal data is processed(trim,validation and set data in object)
 				$journalPersistable = $processor->createPersistableChange($request,$headerData,$journalArray,$jfId);
-				
 				//here two array and string is return at a time
 				if(is_array($journalPersistable))
 				{
@@ -613,7 +689,7 @@ class JournalController extends BaseController implements ContainerInterface
 		{
 			//Authentication
 			$tokenAuthentication = new TokenAuthentication();
-			$authenticationResult = $tokenAuthentication->authenticate($request->header());
+			$authenticationResult = $tokenAuthentication->authenticate($request->header(),'receipt.edit');
 			
 			if(strcmp($constantArray['success'],$authenticationResult)==0)
 			{

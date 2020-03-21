@@ -53,6 +53,7 @@ class UserService extends AbstractService
 			$getData[$data] = $userArray[$data][0]->$funcName[$data]();
 			$keyName[$data] = $userArray[$data][0]->getkey();
 		}
+		// return print_r($userArray);
 		// data pass to the model object for insert
 		$userModel = new UserModel();
 		$status = $userModel->insertData($getData,$keyName);
@@ -67,6 +68,28 @@ class UserService extends AbstractService
 	{
 		$userModel = new UserModel();
 		$status = $userModel->getAllData($request);
+		//get exception message
+		$exception = new ExceptionMessage();
+		$exceptionArray = $exception->messageArrays();
+		if(strcmp($status,$exceptionArray['204'])==0)
+		{
+			return $status;
+		}
+		else
+		{
+			$encoded = new EncodeAllData();
+			$encodeAllData = $encoded->getEncodedAllData($status);
+			return $encodeAllData;
+		}
+	}
+	/**
+     * get all the data and call the model for database selection opertation
+     * @return status
+     */
+	public function getEmailData(Request $request,$emailId)
+	{
+		$userModel = new UserModel();
+		$status = $userModel->getAllData($request,$emailId);
 		//get exception message
 		$exception = new ExceptionMessage();
 		$exceptionArray = $exception->messageArrays();

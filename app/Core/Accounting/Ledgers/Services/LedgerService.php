@@ -118,6 +118,60 @@ class LedgerService extends AbstractService
 			return $encodeAllData;
 		}
 	}
+
+	public function getAllLedgers()
+	{
+		$ledgerModel = new LedgerModel();
+		$status = $ledgerModel->getAllLedgers();
+		
+		
+		//get exception message
+		$exception = new ExceptionMessage();
+		$fileSizeArray = $exception->messageArrays();
+		if(strcmp($status,$fileSizeArray['204'])==0)
+		{
+			return $status;
+		}
+		else
+		{
+			return $status;
+		}
+	}
+
+	public function getCategorywiseLedger($lid,$from,$to)
+	{
+		$ledgerModel = new LedgerModel();
+		$status = $ledgerModel->getCategorywiseLedger($lid,$from,$to);
+		
+		return $status;
+	}
+
+	public function getCategoryDataLedger($lid,$cid,$from,$to)
+	{
+		$ledgerModel = new LedgerModel();
+		$status = $ledgerModel->getCategoryDataLedger($lid,$cid,$from,$to);
+		
+		return $status;
+	}
+
+	public function getOutstandings()
+	{
+		$ledgerModel = new LedgerModel();
+		$status = $ledgerModel->getOutstandings();
+		
+		
+		//get exception message
+		$exception = new ExceptionMessage();
+		$fileSizeArray = $exception->messageArrays();
+		if(strcmp($status,$fileSizeArray['204'])==0)
+		{
+			return $status;
+		}
+		else
+		{
+			return $status;
+		}
+	}
 	
 	/**
      * get all the data  as per given id and call the model for database selection opertation
@@ -151,6 +205,26 @@ class LedgerService extends AbstractService
 	{
 		$ledgerModel = new LedgerModel();
 		$status = $ledgerModel->getAllLedgerData($ledgerGrpId);
+		
+		//get exception message
+		$exception = new ExceptionMessage();
+		$fileSizeArray = $exception->messageArrays();
+		if(strcmp($status,$fileSizeArray['204'])==0)
+		{
+			return $status;
+		}
+		else
+		{
+			$encoded = new EncodeAllData();
+			$encodeAllData = $encoded->getEncodedAllData($status);
+			return $encodeAllData;
+		}
+	}
+
+	public function getCompanyData($companyId,$ledgerGrpId)
+	{
+		$ledgerModel = new LedgerModel();
+		$status = $ledgerModel->getCompanyLedgerData($companyId,$ledgerGrpId);
 		
 		//get exception message
 		$exception = new ExceptionMessage();
@@ -250,7 +324,27 @@ class LedgerService extends AbstractService
 			return $encodeAllData;
 		}
 	}
-	
+	/**
+     * get all the data for given company user and call the model for database selection opertation
+     * @return status
+     */
+	public function getUserData()
+	{
+		$userId = func_get_arg(0);
+		$headerData = func_get_arg(1);
+		$exception = new ExceptionMessage();
+		$exceptionArray = $exception->messageArrays();
+
+		$companyId = $headerData['companyid'][0];
+		$ledgerModel = new LedgerModel();
+		$status = $ledgerModel->getDataAsPerUserId($companyId,$userId);
+		if (strcmp($status, $exceptionArray['204'])==0) {
+			return $status;
+		}
+		$decodedData = json_decode($status,true);
+		$ledgerId = $decodedData[0]['ledger_id'];
+		return $this->getLedgerTransactionDetail($ledgerId);
+	}
 	/**
      * get current-year data and call the model for database selection opertation
      * @return status

@@ -49,7 +49,7 @@ class JobFormNumberController extends BaseController implements ContainerInterfa
     {
 		//Authentication
 		$tokenAuthentication = new TokenAuthentication();
-		$authenticationResult = $tokenAuthentication->authenticate($request->header());
+		$authenticationResult = $tokenAuthentication->authenticate($request->header(),'setting.jobcard.all');
 		
 		//get constant array
 		$constantClass = new ConstantClass();

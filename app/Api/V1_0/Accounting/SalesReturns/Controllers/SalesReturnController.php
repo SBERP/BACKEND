@@ -12,6 +12,7 @@ use ERP\Entities\Constants\ConstantClass;
 use Illuminate\Container\Container;
 
 use ERP\Api\V1_0\Accounting\SalesReturns\Processors\SalesReturnProcessor;
+use ERP\Api\V1_0\Accounting\Bills\Processors\BillProcessor;
 use ERP\Core\Accounting\Bills\Persistables\BillPersistable;
 use ERP\Core\Accounting\SalesReturns\Services\SalesReturnService;
 /**
@@ -74,6 +75,36 @@ class SalesReturnController extends BaseController implements ContainerInterface
 				}
 			}
 		}else{
+			return $authenticationResult;
+		}
+	}
+
+	public function getAll(Request $request, $companyId)
+	{
+		//Authentication
+		$tokenAuthentication = new TokenAuthentication();
+		$authenticationResult = $tokenAuthentication->authenticate($request->header());
+
+		// get constant array
+		$constantClass = new ConstantClass();
+		$constantArray = $constantClass->constantVariable();
+		if (strcmp($constantArray['success'], $authenticationResult) == 0) {
+			// if (array_key_exists('fromdate', $request->header()) && array_key_exists('todate', $request->header())) {
+			// 	$processor = new BillProcessor();
+			// 	$billPersistable = new BillPersistable();
+			// 	$billPersistable = $processor->getPersistableData($request->header());
+			// 	if (!is_object($billPersistable)) {
+			// 		return $billPersistable;
+			// 	}
+			// 	$data = $billPersistable;
+			// } else if (array_key_exists('invoicenumber', $request->header())) {
+			// 	$data = $request->header();
+			// }
+			$SalesReturnService= new SalesReturnService();
+			// $billService = new BillService();
+			$status = $SalesReturnService->getAll($request->header(), $companyId);
+			return $status;
+		} else {
 			return $authenticationResult;
 		}
 	}

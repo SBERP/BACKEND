@@ -50,7 +50,7 @@ class TemplateController extends BaseController implements ContainerInterface
     {
 		//Authentication
 		$tokenAuthentication = new TokenAuthentication();
-		$authenticationResult = $tokenAuthentication->authenticate($request->header());
+		$authenticationResult = $tokenAuthentication->authenticate($request->header(),'template.add');
 		
 		//get constant array
 		$constantClass = new ConstantClass();
@@ -161,7 +161,7 @@ class TemplateController extends BaseController implements ContainerInterface
     {
 		//Authentication
 		$tokenAuthentication = new TokenAuthentication();
-		$authenticationResult = $tokenAuthentication->authenticate($request->header());
+		$authenticationResult = $tokenAuthentication->authenticate($request->header(),'template.edit');
 		
 		//get constant array
 		$constantClass = new ConstantClass();

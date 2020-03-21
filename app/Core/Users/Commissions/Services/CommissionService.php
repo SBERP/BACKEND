@@ -9,6 +9,7 @@ use ERP\Core\Users\Commissions\Entities\EncodeData;
 use ERP\Core\Users\Commissions\Entities\EncodeItemwiseData;
 use ERP\Core\Users\Commissions\Entities\EncodeAllData;
 use ERP\Exceptions\ExceptionMessage;
+use ERP\Model\Accounting\Ledgers\LedgerModel;
 /**
  * @author Hiren Faldu<hiren.f@siliconbrain.in>
  */
@@ -71,6 +72,30 @@ class CommissionService extends AbstractService
 			return $encodeAllData;
 		}
 	}
+
+	/***************************Added after commission update for categorywise and brandWise
+	****************************on Date: 26-02-2020*******************************************/
+	public function getAllCommissionDataValue($userId)
+	{
+		$commissionModel = new CommissionModel();
+		$status = $commissionModel->getAllDataValue($userId);
+		
+		//get exception message
+		$exception = new ExceptionMessage();
+		$fileSizeArray = $exception->messageArrays();
+		if(strcmp($status,$fileSizeArray['204'])==0)
+		{
+			return $status;
+		}
+		else
+		{
+			$encoded = new EncodeAllData();
+			$encodeAllData = $encoded->getEncodedAllData($status);
+			return $encodeAllData;
+		}
+	}
+	/***************************Added after commission update for categorywise and brandWise
+	****************************on Date: 26-02-2020*******************************************/
 	/**
      * get the data from persistable object and call the model for database insertion opertation
      * @param CommissionPersistable $persistable
@@ -94,6 +119,19 @@ class CommissionService extends AbstractService
 		$status = $commissionModel->insertData($getData,$keyName);
 		return $status;
 	}
+
+
+	/***************************Added after commission update for categorywise and brandWise
+		****************************on Date: 26-02-2020*******************************************/
+	public function insertUpdateValue($request)
+	{
+		//data pass to the model object for insert
+		$commissionModel = new CommissionModel();
+		$status = $commissionModel->insertUpdateValue($request);
+		return $status;
+	}
+	/***************************Added after commission update for categorywise and brandWise
+		****************************on Date: 26-02-2020*******************************************/
 	/**
      * get the data from persistable object and call the model for database insertion opertation
      * @param CommissionPersistable $persistable
@@ -189,6 +227,31 @@ class CommissionService extends AbstractService
 			return $encodeData;
 		}
 	} 
+	/**
+     * get all the data for given company user and call the model for database selection opertation
+     * @return status
+     */
+	public function getUserCommissionReport()
+	{
+		$userId = func_get_arg(0);
+		$headerData = func_get_arg(1);
+		$exception = new ExceptionMessage();
+		$exceptionArray = $exception->messageArrays();
+
+		$companyId = $headerData['companyid'][0];
+		$ledgerModel = new LedgerModel();
+		// $status = $ledgerModel->getDataAsPerUserId($companyId,$userId);
+		$status = $ledgerModel->getDataAsPerStaffId($companyId,$userId);
+		if (strcmp($status, $exceptionArray['204'])==0)
+		{
+			return $status;
+		}
+		$decodedData = json_decode($status,true);
+		$ledgerId = $decodedData[0]['ledger_id'];
+		$commissionModel = new CommissionModel();
+		$status = $commissionModel->getUserCommissionReport($ledgerId,$userId,$headerData);
+		return $status;
+	}
 	/**
      * get the data from persistable object and call the model for database insertion opertation
      * @param CommissionPersistable $persistable

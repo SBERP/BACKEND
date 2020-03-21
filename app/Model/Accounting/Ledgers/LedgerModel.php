@@ -702,7 +702,315 @@ class LedgerModel extends Model
 			return $enocodedData;
 		}
 	}
+
+	public function getAllLedgers()
+	{	
+		//database selection
+		$database = "";
+		$constantDatabase = new ConstantClass();
+		$databaseName = $constantDatabase->constantDatabase();
+		
+		DB::beginTransaction();		
+		$ledgerAllData = DB::connection($databaseName)->select("select 
+		ledger_id as ledgerId,
+		alias,
+		ledger_name as ledgerName,
+		concat(address1,address2) as ledgerAddress,
+		contact_no as ledgerContact
+		from ledger_mst where deleted_at='0000-00-00 00:00:00'
+		order by ledger_name");
+		DB::commit();
+		
+		for($i=0;$i<count($ledgerAllData);$i++)
+		{
+			$ledgerAllData[$i]->ledgerOpening=DB::connection($databaseName)->select("select 
+		sum(amount) as amount
+		from ".$ledgerAllData[$i]->ledgerId."_ledger_dtl where jf_id=0 and deleted_at='0000-00-00 00:00:00'")[0]->amount;
+			DB::commit();
+			$credit = DB::connection($databaseName)->select("select 
+		sum(amount) as amount
+		from ".$ledgerAllData[$i]->ledgerId."_ledger_dtl where amount_type='credit' and deleted_at='0000-00-00 00:00:00'")[0]->amount;
+			DB::commit();
+			$debit = DB::connection($databaseName)->select("select 
+		sum(amount) as amount
+		from ".$ledgerAllData[$i]->ledgerId."_ledger_dtl where amount_type='debit' and deleted_at='0000-00-00 00:00:00'")[0]->amount;
+			DB::commit();
+			$ledgerAllData[$i]->ledgerClosing=$credit-$debit;
+		}
+		//get exception message
+		$exception = new ExceptionMessage();
+		$exceptionArray = $exception->messageArrays();
+		if(count($ledgerAllData)==0)
+		{
+			return $exceptionArray['204'];
+		}
+		else
+		{
+			$enocodedData = json_encode($ledgerAllData);
+			return $enocodedData;
+		}
+	}
+
+	public function getCategorywiseLedger($lid,$from,$to)
+	{	
+		//database selection
+		$from = date('Y-m-d',strtotime($from));
+		$to = date('Y-m-d',strtotime($to));
+		$database = "";
+		$constantDatabase = new ConstantClass();
+		$databaseName = $constantDatabase->constantDatabase();
+		
+		DB::beginTransaction();		
+		$tempData = DB::connection($databaseName)->select("select 
+			concat(YEAR(pt.transaction_date),'-',MONTH(pt.transaction_date)) as Month, gm.product_group_id, gm.product_group_name, gm.product_group_parent_id, sum(pt.qty * pt.price) as amount
+			from product_group_mst as gm
+			join ".$lid."_ledger_dtl as ld on ld.jf_id!=0 and ld.deleted_at='0000-00-00 00:00:00'
+			join product_trn as pt on pt.jf_id=ld.jf_id and transaction_date>='".$from."' and transaction_date<='".$to."' and pt.deleted_at='0000-00-00 00:00:00'
+			join product_mst as pm on pm.product_id=pt.product_id and pm.deleted_at='0000-00-00 00:00:00'
+			where gm.product_group_id=pm.product_group_id
+			group by gm.product_group_name");//MONTH(pt.transaction_date), YEAR(pt.transaction_date)
+		DB::commit();
+
+		$cat = [];
+		$category = [];
+		$sub = [];
+		foreach($tempData as $temp)
+		{
+			if($temp->product_group_parent_id=='')
+			{
+				$cat[] = $temp;
+			}
+			else
+			{
+				$sub[] = $temp;
+			}
+		}
+		$data = [];
+		$data['Categories'] = $cat;
+		$data['Subcategories'] = $sub;
+		$final = [];
+
+		foreach($data['Categories'] as $cat)
+		{
+			$catAmount = 0;
+			$partial = [];
+			$partial['categoryId'] = $cat->product_group_id;
+			$partial['categoryName'] = $cat->product_group_name;
+			$partial['amount'] = $cat->amount;
+			$partial['subcategory'] = [];
+			foreach($data['Subcategories'] as $sub)
+			{
+				if($cat->product_group_id == $sub->product_group_parent_id)
+				{
+					$partial['subcategory'][] = [
+						// 'month'=>$sub->Month,
+						'subcategoryId' => $sub->product_group_id,
+						'subcategoryName'=>$sub->product_group_name,
+						'categoryId'=>$sub->product_group_parent_id,
+						'amount'=>$sub->amount,
+					];
+					$catAmount += $sub->amount;
+				}
+			}
+			if($catAmount>0)
+			{
+				$partial['amount'] = $catAmount;
+			}
+			$final[] = $partial;
+		}
+		return $final;	
+	}
+
+	public function getCategoryDataLedger($lid,$cid,$from,$to)
+	{	
+		//database selection
+		$from = date('Y-m-d',strtotime($from));
+		$to = date('Y-m-d',strtotime($to));
+		$database = "";
+		$constantDatabase = new ConstantClass();
+		$databaseName = $constantDatabase->constantDatabase();
+
+		DB::beginTransaction();		
+		$tempData = DB::connection($databaseName)->select("SELECT 
+				 s.sale_id,
+				 s.product_array,
+				 s.payment_mode,
+				 s.bank_ledger_id,
+				 s.bank_name,
+				 s.invoice_number,
+				 s.job_card_number,
+				 s.check_number,
+				 s.total,
+				 s.total_discounttype,
+				 s.total_discount,
+				 s.total_cgst_percentage,
+				 s.total_sgst_percentage,
+				 s.total_igst_percentage,
+				 s.extra_charge,
+				 s.tax,
+				 s.grand_total,
+				 s.advance,
+				 s.balance,
+				 s.po_number,
+				 s.user_id,
+				 s.remark,
+				 s.entry_date,
+				 s.service_date,
+				 s.client_id,
+				 s.sales_type,
+				 s.refund,
+				 s.jf_id,
+				 s.print_count,
+				 s.company_id,
+				 s.branch_id,
+				 s.created_at,
+				 s.updated_at,
+				 e.expense,
+				 d.file
+				 from `sales_bill` as `s` 
+				 LEFT JOIN (
+				 	SELECT 
+				 		sale_id, 
+				 		CONCAT( 
+				 			'[', 
+				 				GROUP_CONCAT( CONCAT( 
+				 					'{\"saleExpenseId\":', sale_expense_id,
+				 					 	', \"expenseType\":\"', IFNULL(expense_type,''),
+				 					 	'\", \"expenseId\":', IFNULL(expense_id,0),
+				 					 	', \"expenseName\":\"', IFNULL(expense_name,''),
+				 					 	'\", \"expenseValue\":\"', IFNULL(expense_value,''),
+				 					 	'\", \"expenseTax\":\"', IFNULL(expense_tax,''),
+				 					 	'\", \"expenseOperation\":\"', IFNULL(expense_operation,''),
+				 					 	'\", \"saleId\":', IFNULL(sale_id,0),
+				 				 	' }'
+				 				 ) SEPARATOR ', '),
+				 			']'
+				 		) expense
+				 	FROM sale_expense_dtl
+				 	WHERE deleted_at='0000-00-00 00:00:00'
+				 	GROUP BY sale_id 
+				 ) e ON e.sale_id = s.sale_id
+
+				 LEFT JOIN (
+				 	SELECT 
+				 		sale_id, 
+				 		CONCAT( 
+				 			'[', 
+				 				GROUP_CONCAT( CONCAT( 
+				 					'{\"documentId\":', document_id,
+				 					 	', \"saleId\":', IFNULL(sale_id,0),
+				 					 	', \"documentName\":\"', IFNULL(document_name,''),
+				 					 	'\", \"documentSize\":\"', IFNULL(document_size,''),
+				 					 	'\", \"documentFormat\":\"', IFNULL(document_format,''),
+				 					 	'\", \"documentType\":\"', IFNULL(document_type,''),
+				 					 	'\", \"createdAt\":\"', DATE_FORMAT(created_at, '%d-%m-%Y'),
+				 					 	'\", \"updatedAt\":\"', DATE_FORMAT(updated_at, '%d-%m-%Y'),
+				 				 	'\" }'
+				 				 ) SEPARATOR ', '),
+				 			']'
+				 		) file
+				 	FROM sales_bill_doc_dtl
+				 	WHERE deleted_at='0000-00-00 00:00:00'
+				 	GROUP BY sale_id 
+				 ) d ON d.sale_id = s.sale_id
+		where invoice_number in ( select 
+			pt.invoice_number
+			from product_group_mst as gm
+			join ".$lid."_ledger_dtl as ld on ld.jf_id!=0 and ld.deleted_at='0000-00-00 00:00:00'
+			join product_trn as pt on pt.jf_id=ld.jf_id and transaction_date>='".$from."' and transaction_date<='".$to."' and pt.deleted_at='0000-00-00 00:00:00'
+			join product_mst as pm on pm.product_id=pt.product_id and pm.deleted_at='0000-00-00 00:00:00'
+			where gm.product_group_id=pm.product_group_id and gm.product_group_id=".$cid."
+			group by gm.product_group_name) and deleted_at='0000-00-00 00:00:00'");
+		DB::commit();
+		return $tempData;
+	}
 	
+	public function getOutstandings()
+	{	
+		//database selection
+		$database = "";
+		$constantDatabase = new ConstantClass();
+		$databaseName = $constantDatabase->constantDatabase();
+		
+		DB::beginTransaction();		
+		$clients = DB::connection($databaseName)->select("select 
+		client_id as clientId,
+		client_name as clientName
+		from client_mst where deleted_at='0000-00-00 00:00:00'");
+		DB::commit();
+
+		// $client[$i]->totalPaid = 0;
+		// $client[$i]->totalUnPaid = 0;
+		// $client[$i]->totalAmount = 0;
+		$receivable = [];
+		for($i=0;$i<count($clients);$i++)
+		{
+			$clients[$i]->salesBills = DB::connection($databaseName)->select("select
+		sale_id,
+		invoice_number as invoiceNumber, 
+		total,
+		advance as paid,
+		balance as unPaid
+		from sales_bill where client_id=".$clients[$i]->clientId." and deleted_at='0000-00-00 00:00:00'");	
+		DB::commit();
+		$data = DB::connection($databaseName)->select("select
+		sum(advance) as advance,
+		sum(balance) as balance,
+		sum(total) as total
+		from sales_bill where client_id=".$clients[$i]->clientId." and deleted_at='0000-00-00 00:00:00'")[0];
+		DB::commit();
+		$clients[$i]->totalPaid = $data->advance; 
+		$clients[$i]->totalUnPaid = $data->balance;
+		$clients[$i]->total = $data->total;
+		if(count($clients[$i]->salesBills)>0)
+			$receivable[] = $clients[$i];
+		}
+
+		$vendors = DB::connection($databaseName)->select("select 
+		ledger_id as vendorId,
+		ledger_name as vendorName
+		from ledger_mst where ledger_id in (select distinct(vendor_id) from purchase_bill) and deleted_at='0000-00-00 00:00:00'");
+		DB::commit();
+
+		$payable = [];
+		for($i=0;$i<count($vendors);$i++)
+		{
+			$vendors[$i]->purchaseBills = DB::connection($databaseName)->select("select
+        purchase_id,
+		bill_number as billNumber, 
+		total,
+		advance as paid,
+		balance as unPaid
+		from purchase_bill where vendor_id=".$vendors[$i]->vendorId." and deleted_at='0000-00-00 00:00:00'");	
+		DB::commit();
+		$data = DB::connection($databaseName)->select("select
+		sum(advance) as advance,
+		sum(balance) as balance,
+		sum(total) as total
+		from purchase_bill where vendor_id=".$vendors[$i]->vendorId." and deleted_at='0000-00-00 00:00:00'")[0];
+		DB::commit();
+		$vendors[$i]->totalPaid = $data->advance; 
+		$vendors[$i]->totalUnPaid = $data->balance;
+		$vendors[$i]->total = $data->total;
+		if(count($vendors[$i]->purchaseBills)>0)
+			$payable[] = $vendors[$i];
+		}
+		//get exception message
+		$data = [
+			'receivable'=>$receivable,
+			'payable'=>$payable];
+		$exception = new ExceptionMessage();
+		$exceptionArray = $exception->messageArrays();
+		if(count($data)==0)
+		{
+			return $exceptionArray['204'];
+		}
+		else
+		{
+			$enocodedData = json_encode($data);
+			return $enocodedData;
+		}
+	}
 	/**
 	 * get data as per given Ledger Id
 	 * @param $ledgerId
@@ -951,6 +1259,128 @@ class LedgerModel extends Model
 			return $enocodedData;
 		}
 	}
+
+	public function getCompanyLedgerData($companyId,$ledgerGrpId)
+	{	
+		//database selection
+
+		$database = "";
+		$constantDatabase = new ConstantClass();
+		$databaseName = $constantDatabase->constantDatabase();
+		
+		DB::beginTransaction();		
+		$ledgerAllData = DB::connection($databaseName)->select("select 
+		ledger_id,
+		ledger_name,
+		alias,
+		inventory_affected,
+		address1,
+		address2,
+		contact_no,
+		email_id,
+		is_dealer,
+		invoice_number,
+		outstanding_limit,
+		outstanding_limit_type,
+		pan,
+		tin,
+		cgst,
+		sgst,
+		bank_id,
+		bank_dtl_id,
+		micr_code,
+		created_at,
+		updated_at,
+		deleted_at,
+		state_abb,
+		city_id,
+		ledger_group_id,
+		company_id
+		from ledger_mst where ledger_group_id ='".$ledgerGrpId."' and company_id ='".$companyId."' and  deleted_at='0000-00-00 00:00:00'");
+		DB::commit();
+		//get exception message
+		$exception = new ExceptionMessage();
+		$exceptionArray = $exception->messageArrays();
+		if(count($ledgerAllData)==0)
+		{
+			return $exceptionArray['204'];
+		}
+		else
+		{
+			$ledgerIdArray = array();
+			$mergeArray = array();
+			for($ledgerDataArray=0;$ledgerDataArray<count($ledgerAllData);$ledgerDataArray++)
+			{
+				$ledgerIdArray[$ledgerDataArray] = $ledgerAllData[$ledgerDataArray]->ledger_id;
+				$currentBalanceType="";
+				
+				//get opening balance
+				DB::beginTransaction();
+				$raw = DB::connection($databaseName)->select("SELECT 
+				".$ledgerIdArray[$ledgerDataArray]."_id,
+				amount,
+				amount_type
+				from ".$ledgerIdArray[$ledgerDataArray]."_ledger_dtl
+				WHERE balance_flag='opening' and 
+				deleted_at='0000-00-00 00:00:00'");
+				DB::commit();
+				if(count($raw)!=0)
+				{
+					//get current balance
+					DB::beginTransaction();
+					$ledgerResult = DB::connection($databaseName)->select("SELECT 
+					".$ledgerIdArray[$ledgerDataArray]."_id,
+					amount,
+					amount_type
+					from ".$ledgerIdArray[$ledgerDataArray]."_ledger_dtl
+					WHERE deleted_at='0000-00-00 00:00:00'");
+					DB::commit();
+					
+					$creditAmountArray =0;
+					$debitAmountArray = 0;
+					for($ledgerArrayData=0;$ledgerArrayData<count($ledgerResult);$ledgerArrayData++)
+					{
+						if(strcmp($ledgerResult[$ledgerArrayData]->amount_type,"credit")==0)
+						{
+							$creditAmountArray = $creditAmountArray+$ledgerResult[$ledgerArrayData]->amount;
+							
+						}
+						else
+						{
+							$debitAmountArray = $debitAmountArray+$ledgerResult[$ledgerArrayData]->amount;
+						}
+					}
+					if(count($ledgerResult)==0)
+					{
+						return $exceptionArray['404'];
+					}
+				}
+				else
+				{
+					return $exceptionArray['404'];
+				}
+				//calculate opening balance
+				if($creditAmountArray>$debitAmountArray)
+				{
+					$amountData = $creditAmountArray-$debitAmountArray;
+					$currentBalanceType = "credit";
+				}
+				else
+				{
+					$amountData = $debitAmountArray-$creditAmountArray;
+					$currentBalanceType = "debit";
+				}
+				$balanceAmountArray = array();
+				$balanceAmountArray['openingBalance'] = $raw[0]->amount;
+				$balanceAmountArray['openingBalanceType'] = $raw[0]->amount_type;
+				$balanceAmountArray['currentBalance'] = $amountData;
+				$balanceAmountArray['currentBalanceType'] = $currentBalanceType;
+				$mergeArray[$ledgerDataArray] = (Object)array_merge((array)$ledgerAllData[$ledgerDataArray],(array)((Object)$balanceAmountArray));
+			}
+			$enocodedData = json_encode($mergeArray);
+			return $enocodedData;
+		}
+	}
 	
 	/**
 	 * get All data 
@@ -1092,18 +1522,27 @@ class LedgerModel extends Model
 		//get exception message
 		$exception = new ExceptionMessage();
 		$exceptionArray = $exception->messageArrays();
+
+		$closing = 0;
 		
 		DB::beginTransaction();		
 		$data = DB::connection($databaseName)->select("select 
-		".$ledgerId."_id,
-		amount,
-		amount_type,
-		entry_date,
-		jf_id,
-		created_at,
-		updated_at,
-		ledger_id
-		from ".$ledgerId."_ledger_dtl where deleted_at='0000-00-00 00:00:00'");
+		ld.".$ledgerId."_id,
+		ld.amount,
+		ld.amount_type,
+		ld.entry_date,
+		ld.jf_id,
+		ld.created_at,
+		ld.updated_at,
+		ld.ledger_id,
+		sb.sale_id,
+		sb.invoice_number,
+		pb.purchase_id,
+		pb.bill_number
+		from `".$ledgerId."_ledger_dtl` as `ld`
+		left join `sales_bill` as `sb` on ld.jf_id=sb.jf_id and sb.jf_id!=0 
+        left join `purchase_bill` as `pb` on ld.jf_id=pb.jf_id and sb.jf_id!=0 where ld.deleted_at='0000-00-00 00:00:00'
+        group by ld.".$ledgerId."_id");
 		DB::commit();
 		if(count($data)==0)
 		{
@@ -1111,6 +1550,18 @@ class LedgerModel extends Model
 		}
 		else
 		{
+			for($i=0;$i<count($data);$i++)
+			{
+				if($data[$i]->amount_type=='debit')
+				{
+					$closing -= $data[$i]->amount;
+				}
+				else
+				{
+					$closing += $data[$i]->amount;
+				}
+				$data[$i]->closingBalance = $closing;
+			}
 			$ledgerId = $data[0]->ledger_id;
 			$currentBalanceType="";
 			
@@ -1980,7 +2431,64 @@ class LedgerModel extends Model
 		DB::commit();
 		if(count($raw)==0)
 		{
-			return $exceptionArray['500'];
+			return $exceptionArray['204'];
+		}
+		else
+		{
+			$encodedData = json_encode($raw);
+			return $encodedData;
+		}
+	}
+
+	public function getDataAsPerStaffId($companyId,$staffId)
+	{
+		//database selection
+		$database = "";
+		$constantDatabase = new ConstantClass();
+		$databaseName = $constantDatabase->constantDatabase();
+		
+		//get exception message
+		$exception = new ExceptionMessage();
+		$exceptionArray = $exception->messageArrays();
+		$companyIdString = "";
+		
+		DB::beginTransaction();
+		$raw = DB::connection($databaseName)->select("select 
+		ledger_id,
+		ledger_name,
+		alias,
+		inventory_affected,
+		address1,
+		address2,
+		contact_no,
+		email_id,
+		is_dealer,
+		invoice_number,
+		outstanding_limit,
+		outstanding_limit_type,
+		pan,
+		tin,
+		cgst,
+		sgst,
+		bank_id,
+		bank_dtl_id,
+		micr_code,
+		created_at,
+		updated_at,
+		deleted_at,
+		state_abb,
+		city_id,
+		ledger_group_id,
+		company_id,
+		user_id
+		from ledger_mst 
+		where deleted_at='0000-00-00 00:00:00' and
+		staff_id='".$staffId."' and
+		company_id='".$companyId."'");
+		DB::commit();
+		if(count($raw)==0)
+		{
+			return $exceptionArray['204'];
 		}
 		else
 		{
@@ -2182,7 +2690,41 @@ class LedgerModel extends Model
 			return $exceptionArray['404'];
 		}
 	}
-	
+	/**
+	 * @param: companyId
+	 * @return: general Ledgers
+	 */
+	function getGeneralLedgers($companyId) {
+		$database = "";
+		$constantDatabase = new ConstantClass();
+		$databaseName = $constantDatabase->constantDatabase();
+		$ledgerArray = new ledgerArray();
+		$generalLedgerArray = $ledgerArray->ledgerArrays();
+		$ledgerNames = array_values($generalLedgerArray);
+		$where_in_string = "( ?";
+		$where_in_string .= str_repeat(', ?', count($ledgerNames) - 1);
+		$where_in_string .= " )";
+		DB::beginTransaction();
+		$status = DB::connection($databaseName)->select("SELECT 
+		ledger_id,
+		ledger_name,
+		ledger_group_id,
+		company_id
+		FROM ledger_mst 
+		WHERE company_id ='".$companyId."' 
+		AND ledger_name IN $where_in_string
+		AND deleted_at='0000-00-00 00:00:00'", $ledgerNames);
+		DB::commit();
+		
+		//get exception message
+		$exception = new ExceptionMessage();
+		$exceptionArray = $exception->messageArrays();
+		if(count($status)==0)
+		{
+			return $exceptionArray['204'];
+		}
+		return json_encode($status);
+	}
 	/**
 	 * delete the data
 	 * @param: ledgerId

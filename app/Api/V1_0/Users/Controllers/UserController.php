@@ -50,7 +50,8 @@ class UserController extends BaseController implements ContainerInterface
     {
 		//Authentication
 		$tokenAuthentication = new TokenAuthentication();
-		$authenticationResult = $tokenAuthentication->authenticate($request->header());
+		$authenticationResult = $tokenAuthentication->authenticate($request->header(),'staff.add');
+
 		
 		//get exception message
 		$exception = new ExceptionMessage();
@@ -151,7 +152,7 @@ class UserController extends BaseController implements ContainerInterface
     {    
 		//Authentication
 		$tokenAuthentication = new TokenAuthentication();
-		$authenticationResult = $tokenAuthentication->authenticate($request->header());
+		$authenticationResult = $tokenAuthentication->authenticate($request->header(),'staff.edit');
 		
 		//get exception message
 		$exception = new ExceptionMessage();
@@ -215,7 +216,7 @@ class UserController extends BaseController implements ContainerInterface
     {
 		//Authentication
 		$tokenAuthentication = new TokenAuthentication();
-		$authenticationResult = $tokenAuthentication->authenticate($request->header());
+		$authenticationResult = $tokenAuthentication->authenticate($request->header(),'staff.delete');
 		
 		//get exception message
 		$exception = new ExceptionMessage();
@@ -258,6 +259,287 @@ class UserController extends BaseController implements ContainerInterface
 					$status = $userService->delete($userPersistable);
 					return $status;
 				}
+			}
+		}
+		else
+		{
+			return $authenticationResult;
+		}
+    }
+
+    public function getPermissionsAll(Request $request)
+    {
+    	//Authentication
+		$tokenAuthentication = new TokenAuthentication();
+		$authenticationResult = $tokenAuthentication->authenticate($request->header());
+		
+		//get exception message
+		$exception = new ExceptionMessage();
+		$exceptionArray = $exception->messageArrays();
+		
+		//get constant array
+		$constantClass = new ConstantClass();
+		$constantArray = $constantClass->constantVariable();
+		
+		if(strcmp($constantArray['success'],$authenticationResult)==0)
+		{
+			//get user-type from active_session & user_mst for checking user is admin or not?
+			$authenticationModel = new AuthenticateModel();
+			$userType = $authenticationModel->getUserType($request->header());
+			if(strcmp($userType,$exceptionArray['content'])==0)
+			{
+				return $userType;
+			}
+			else
+			{
+				$userModel = new UserModel();
+				$data = $userModel->getPermissionsData();
+				return $data;
+			}
+		}
+		else
+		{
+			return $authenticationResult;
+		}
+    }
+    public function setPermissions(Request $request)
+    {
+    	$tokenAuthentication = new TokenAuthentication();
+		$authenticationResult = $tokenAuthentication->authenticate($request->header(),'staff.edit');
+		
+		//get exception message
+		$exception = new ExceptionMessage();
+		$exceptionArray = $exception->messageArrays();
+		
+		//get constant array
+		$constantClass = new ConstantClass();
+		$constantArray = $constantClass->constantVariable();
+		
+		if(strcmp($constantArray['success'],$authenticationResult)==0)
+		{
+			//get user-type from active_session & user_mst for checking user is admin or not?
+			$authenticationModel = new AuthenticateModel();
+			$userType = $authenticationModel->getUserType($request->header());
+			if(strcmp($userType,$exceptionArray['content'])==0)
+			{
+				return $userType;
+			}
+			else
+			{
+				$userModel = new UserModel();
+				$data = $userModel->updatePermissions($request->all());
+				return $data;	
+			}
+		}
+		else
+		{
+			return $authenticationResult;
+		}
+    }
+    public function getPermissions(Request $request,$roleId)
+    {
+    	$tokenAuthentication = new TokenAuthentication();
+		$authenticationResult = $tokenAuthentication->authenticate($request->header());
+		
+		//get exception message
+		$exception = new ExceptionMessage();
+		$exceptionArray = $exception->messageArrays();
+		
+		//get constant array
+		$constantClass = new ConstantClass();
+		$constantArray = $constantClass->constantVariable();
+		
+		if(strcmp($constantArray['success'],$authenticationResult)==0)
+		{
+			//get user-type from active_session & user_mst for checking user is admin or not?
+			$authenticationModel = new AuthenticateModel();
+			$userType = $authenticationModel->getUserType($request->header());
+			if(strcmp($userType,$exceptionArray['content'])==0)
+			{
+				return $userType;
+			}
+			else
+			{
+				$userModel = new UserModel();
+				$data = $userModel->getPermissions($roleId);
+				return $data;	
+			}
+		}
+		else
+		{
+			return $authenticationResult;
+		}
+    }
+    public function getRolesAll(Request $request)
+    {
+    	$tokenAuthentication = new TokenAuthentication();
+		$authenticationResult = $tokenAuthentication->authenticate($request->header());
+		
+		//get exception message
+		$exception = new ExceptionMessage();
+		$exceptionArray = $exception->messageArrays();
+		
+		//get constant array
+		$constantClass = new ConstantClass();
+		$constantArray = $constantClass->constantVariable();
+		
+		if(strcmp($constantArray['success'],$authenticationResult)==0)
+		{
+			//get user-type from active_session & user_mst for checking user is admin or not?
+			$authenticationModel = new AuthenticateModel();
+			$userType = $authenticationModel->getUserType($request->header());
+			if(strcmp($userType,$exceptionArray['content'])==0)
+			{
+				return $userType;
+			}
+			else
+			{
+				$userModel = new UserModel();
+				$data = $userModel->getRolesAll();
+				return $data;	
+			}
+		}
+		else
+		{
+			return $authenticationResult;
+		}
+    }
+    public function roleStore(Request $request)
+    {
+    	//Authentication
+		$tokenAuthentication = new TokenAuthentication();
+		$authenticationResult = $tokenAuthentication->authenticate($request->header(),'staff.add');
+		
+		//get exception message
+		$exception = new ExceptionMessage();
+		$exceptionArray = $exception->messageArrays();
+		
+		//get constant array
+		$constantClass = new ConstantClass();
+		$constantArray = $constantClass->constantVariable();
+		if(strcmp($constantArray['success'],$authenticationResult)==0)
+		{
+			//get user-type from active_session & user_mst for checking user is admin or not?
+			$authenticationModel = new AuthenticateModel();
+			$userType = $authenticationModel->getUserType($request->header());
+
+			if(strcmp($userType,$exceptionArray['content'])==0)
+			{
+				return $userType;
+			}
+			else
+			{
+				$userModel = new UserModel();
+				$data = $userModel->roleStore($request->all());
+				return $data;
+			}
+		}
+		else
+		{
+			return $authenticationResult;
+		}
+    }
+
+    public function roleUpdate(Request $request,$roleId)
+    {
+    	//Authentication
+		$tokenAuthentication = new TokenAuthentication();
+		$authenticationResult = $tokenAuthentication->authenticate($request->header(),'staff.edit');
+		
+		//get exception message
+		$exception = new ExceptionMessage();
+		$exceptionArray = $exception->messageArrays();
+		
+		//get constant array
+		$constantClass = new ConstantClass();
+		$constantArray = $constantClass->constantVariable();
+		if(strcmp($constantArray['success'],$authenticationResult)==0)
+		{
+			//get user-type from active_session & user_mst for checking user is admin or not?
+			$authenticationModel = new AuthenticateModel();
+			$userType = $authenticationModel->getUserType($request->header());
+
+			if(strcmp($userType,$exceptionArray['content'])==0)
+			{
+				return $userType;
+			}
+			else
+			{
+				$userModel = new UserModel();
+				$data = $userModel->roleUpdate($request->all(),$roleId);
+				return $data;
+			}
+		}
+		else
+		{
+			return $authenticationResult;
+		}
+    }
+
+    public function roleDestroy(Request $request,$roleId)
+    {
+    	//Authentication
+		$tokenAuthentication = new TokenAuthentication();
+		$authenticationResult = $tokenAuthentication->authenticate($request->header(),'staff.delete');
+		
+		//get exception message
+		$exception = new ExceptionMessage();
+		$exceptionArray = $exception->messageArrays();
+		
+		//get constant array
+		$constantClass = new ConstantClass();
+		$constantArray = $constantClass->constantVariable();
+		if(strcmp($constantArray['success'],$authenticationResult)==0)
+		{
+			//get user-type from active_session & user_mst for checking user is admin or not?
+			$authenticationModel = new AuthenticateModel();
+			$userType = $authenticationModel->getUserType($request->header());
+
+			if(strcmp($userType,$exceptionArray['content'])==0)
+			{
+				return $userType;
+			}
+			else
+			{
+				$userModel = new UserModel();
+				$data = $userModel->roleDestroy($roleId);
+				return $data;
+			}
+		}
+		else
+		{
+			return $authenticationResult;
+		}
+    }
+
+    public function getActivity(Request $request)
+    {
+    	//Authentication
+		$tokenAuthentication = new TokenAuthentication();
+		$authenticationResult = $tokenAuthentication->authenticate($request->header());
+		
+		//get exception message
+		$exception = new ExceptionMessage();
+		$exceptionArray = $exception->messageArrays();
+		
+		//get constant array
+		$constantClass = new ConstantClass();
+		$constantArray = $constantClass->constantVariable();
+		if(strcmp($constantArray['success'],$authenticationResult)==0)
+		{
+			//get user-type from active_session & user_mst for checking user is admin or not?
+			$authenticationModel = new AuthenticateModel();
+			$userType = $authenticationModel->getUserType($request->header());
+
+			if(strcmp($userType,$exceptionArray['content'])==0)
+			{
+				return $userType;
+			}
+			else
+			{
+				$userModel = new UserModel();
+				$data = $userModel->getActivity();
+				return $data;
 			}
 		}
 		else

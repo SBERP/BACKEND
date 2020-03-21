@@ -241,7 +241,8 @@ class ProductGroupModel extends Model
 		product_group_parent_id,
 		created_at,
 		updated_at
-		from product_group_mst where deleted_at='0000-00-00 00:00:00'");
+		from product_group_mst where deleted_at='0000-00-00 00:00:00'
+		order by product_group_parent_id");
 		DB::commit();
 		
 		//get exception message

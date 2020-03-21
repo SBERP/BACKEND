@@ -50,7 +50,7 @@ class SettingController extends BaseController implements ContainerInterface
     {
   		// Authentication
 		$tokenAuthentication = new TokenAuthentication();
-		$authenticationResult = $tokenAuthentication->authenticate($request->header());
+		$authenticationResult = $tokenAuthentication->authenticate($request->header(),'setting.option.all');
 		
 		// get constant array
 		$constantClass = new ConstantClass();
@@ -97,7 +97,7 @@ class SettingController extends BaseController implements ContainerInterface
     {
     	// Authentication
 		$tokenAuthentication = new TokenAuthentication();
-		$authenticationResult = $tokenAuthentication->authenticate($request->header());
+		$authenticationResult = $tokenAuthentication->authenticate($request->header(),'setting.option.all');
 		
 		// get constant array
 		$constantClass = new ConstantClass();

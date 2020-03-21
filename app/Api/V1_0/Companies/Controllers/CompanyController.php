@@ -51,7 +51,7 @@ class CompanyController extends BaseController implements ContainerInterface
     {
 		//Authentication
 		$tokenAuthentication = new TokenAuthentication();
-		$authenticationResult = $tokenAuthentication->authenticate($request->header());
+		$authenticationResult = $tokenAuthentication->authenticate($request->header(),'company.add');
 		
 		//get constant array
 		$constantClass = new ConstantClass();
@@ -134,7 +134,7 @@ class CompanyController extends BaseController implements ContainerInterface
     {    
 		//Authentication
 		$tokenAuthentication = new TokenAuthentication();
-		$authenticationResult = $tokenAuthentication->authenticate($request->header());
+		$authenticationResult = $tokenAuthentication->authenticate($request->header(),'company.edit');
 		
 		//get constant array
 		$constantClass = new ConstantClass();
@@ -188,7 +188,7 @@ class CompanyController extends BaseController implements ContainerInterface
     {
 		//Authentication
 		$tokenAuthentication = new TokenAuthentication();
-		$authenticationResult = $tokenAuthentication->authenticate($request->header());
+		$authenticationResult = $tokenAuthentication->authenticate($request->header(),'company.delete');
 		
 		//get constant array
 		$constantClass = new ConstantClass();

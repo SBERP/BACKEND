@@ -51,7 +51,7 @@ class ProductGroupController extends BaseController implements ContainerInterfac
     {
 		//Authentication
 		$tokenAuthentication = new TokenAuthentication();
-		$authenticationResult = $tokenAuthentication->authenticate($request->header());
+		$authenticationResult = $tokenAuthentication->authenticate($request->header(),'category.add');
 		
 		//get constant array
 		$constantClass = new ConstantClass();
@@ -103,7 +103,7 @@ class ProductGroupController extends BaseController implements ContainerInterfac
     {
 		//Authentication
 		$tokenAuthentication = new TokenAuthentication();
-		$authenticationResult = $tokenAuthentication->authenticate($request->header());
+		$authenticationResult = $tokenAuthentication->authenticate($request->header(),'category.add');
 		
 		//get constant array
 		$constantClass = new ConstantClass();
@@ -221,7 +221,7 @@ class ProductGroupController extends BaseController implements ContainerInterfac
     {
 		//Authentication
 		$tokenAuthentication = new TokenAuthentication();
-		$authenticationResult = $tokenAuthentication->authenticate($request->header());
+		$authenticationResult = $tokenAuthentication->authenticate($request->header(),'category.edit');
 		
 		//get constant array
 		$constantClass = new ConstantClass();
@@ -272,7 +272,7 @@ class ProductGroupController extends BaseController implements ContainerInterfac
     {
 		//Authentication
 		$tokenAuthentication = new TokenAuthentication();
-		$authenticationResult = $tokenAuthentication->authenticate($request->header());
+		$authenticationResult = $tokenAuthentication->authenticate($request->header(),'category.delete');
 		
 		//get constant array
 		$constantClass = new ConstantClass();

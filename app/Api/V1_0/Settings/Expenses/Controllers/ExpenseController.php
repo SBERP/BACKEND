@@ -49,7 +49,7 @@ class ExpenseController extends BaseController implements ContainerInterface
     {
     	//Authentication
 		$tokenAuthentication = new TokenAuthentication();
-		$authenticationResult = $tokenAuthentication->authenticate($request->header());
+		$authenticationResult = $tokenAuthentication->authenticate($request->header(),'setting.expenses.all');
 		
 		//get constant array
 		$constantClass = new ConstantClass();
@@ -64,7 +64,7 @@ class ExpenseController extends BaseController implements ContainerInterface
 			if($requestMethod == 'POST')
 			{
 				$processor = new ExpenseProcessor();
-				$expenseService= new ExpenseService();			
+				$expenseService= new ExpenseService();
 				$expensePersistable = $processor->createPersistable($this->request);
 				if($expensePersistable[0][0]=='[')
 				{
@@ -130,7 +130,7 @@ class ExpenseController extends BaseController implements ContainerInterface
     {
 		//Authentication
 		$tokenAuthentication = new TokenAuthentication();
-		$authenticationResult = $tokenAuthentication->authenticate($request->header());
+		$authenticationResult = $tokenAuthentication->authenticate($request->header(),'setting.expenses.all');
 		
 		//get constant array
 		$constantClass = new ConstantClass();
@@ -152,7 +152,7 @@ class ExpenseController extends BaseController implements ContainerInterface
 			}
 			else
 			{
-				$expensePersistable = $processor->createPersistableChange($this->request,$expenseId);
+				$expensePersistable = $processor->createPersistableChange($this->request,$expenseId, $result);
 				//here two array and string is return at a time
 				if(is_array($expensePersistable))
 				{
@@ -182,7 +182,7 @@ class ExpenseController extends BaseController implements ContainerInterface
     {
 		//Authentication
 		$tokenAuthentication = new TokenAuthentication();
-		$authenticationResult = $tokenAuthentication->authenticate($request->header());
+		$authenticationResult = $tokenAuthentication->authenticate($request->header(),'setting.expenses.all');
 		
 		//get constant array
 		$constantClass = new ConstantClass();

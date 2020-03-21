@@ -35,7 +35,11 @@ class ClientTransformer
 		? $request->input('anniversaryDate'):'0000-00-00';
 		$otherDate=array_key_exists('otherDate',$request->input())?$request->input('otherDate'):'0000-00-00'; 			
 		$creditLimit=array_key_exists('creditLimit',$request->input())?$request->input('creditLimit'):''; 			
-		$creditDays=array_key_exists('creditDays',$request->input())?$request->input('creditDays'):''; 			
+		$creditDays=array_key_exists('creditDays',$request->input())?$request->input('creditDays'):''; 	
+		$carpenterId=array_key_exists('carpenterId',$request->input())?$request->input('carpenterId'):'';
+		$carpenterCommission=array_key_exists('carpenterCommission',$request->input())?$request->input('carpenterCommission'):'';
+		$architectId=array_key_exists('architectId',$request->input())?$request->input('architectId'):'';
+		$architectCommission=array_key_exists('architectCommission',$request->input())?$request->input('architectCommission'):'';
 		//birth-date conversion
 		if(strcmp($birthDate,'0000-00-00')!=0)
 		{
@@ -68,6 +72,11 @@ class ClientTransformer
 		$tCityId = trim($cityId);
 		$tCreditLimit = trim($creditLimit);
 		$tCreditDays = trim($creditDays);
+		$tcarpenterId = trim($carpenterId);
+		$tcarpenterCommission = trim($carpenterCommission);
+		$tarchitectId = trim($architectId);
+		$tarchitectCommission = trim($architectCommission);
+
 		//check is_display is exist or not
 		for($clientData=0;$clientData<count($request->input());$clientData++)
 		{
@@ -130,6 +139,10 @@ class ClientTransformer
 			$data['other_date'] = $otherDate;
 			$data['credit_limit'] = $tCreditLimit;
 			$data['credit_days'] = $tCreditDays;
+			$data['carpenter_id'] = $tcarpenterId;
+			$data['carpenter_commission'] = $tcarpenterCommission;
+			$data['architect_id'] = $tarchitectId;
+			$data['architect_commission'] = $tarchitectCommission;
 			return $data;
 		}
 	}

@@ -13,7 +13,7 @@ return [
     |
     */
 
-    'env' => env('APP_ENV', 'production'),
+    'env' => env('APP_ENV', 'development'),
 
     /*
     |--------------------------------------------------------------------------
@@ -154,6 +154,7 @@ return [
 		ERP\Api\V1_0\Support\RouteServiceProvider::class,
 		// ERP\Api\V1_0\Support\AppServiceProvider::class,
 		ERP\Debug\Support\RouteServiceProvider::class,
+        // Spatie\Permission\PermissionServiceProvider::class,
          
 		// ERP\Providers\AppServiceProvider::class,
         // ERP\Providers\AuthServiceProvider::class,
@@ -206,7 +207,6 @@ return [
         'Validator' => Illuminate\Support\Facades\Validator::class,
         'View' => Illuminate\Support\Facades\View::class,
         'Carbon' => 'Carbon\Carbon'
-
     ],
 	'packages' => [
         'Companies',
@@ -227,6 +227,7 @@ return [
         'Clients',
         'Bills',
         'SalesReturns',
+        'PurchaseReturns',
         'TrialBalance',
         'BalanceSheet',
         'ProfitLoss',
@@ -246,7 +247,10 @@ return [
         'Expenses',
         'PurchaseBills',
         'MeasurementUnits',
-        'Merge'
+        'Merge',
+        'ReportBuilder',
+        'CreditNotes',
+        'DebitNotes'
 	],
 
     /*
